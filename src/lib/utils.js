@@ -211,3 +211,83 @@ export function getMonthlyCustomerStatus(customer, currentSaturdayComparable = 2
     };
   }
 }
+
+/**
+ * Extracts { lat, lng } from various string formats (lat,lng or Google Maps URLs)
+ */
+export function extractCoordinates(gpsLocation) {
+  if (!gpsLocation || typeof gpsLocation !== "string") return null;
+  const str = gpsLocation.trim();
+  if (!str) return null;
+
+  // 1. Direct "16.51234, 82.12345" or "16.51234,82.12345"
+  const directMatch = str.match(/^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/);
+  if (directMatch) {
+    const lat = parseFloat(directMatch[1]);
+    const lng = parseFloat(directMatch[3]);
+    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+  }
+
+  // 2. Google Maps URLs: ?q=16.51234,82.12345 or @16.51234,82.12345 or ll=16.51234,82.12345
+  const urlMatch =
+    str.match(/[?&]q=(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/) ||
+    str.match(/@(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/) ||
+    str.match(/ll=(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/);
+  if (urlMatch) {
+    const lat = parseFloat(urlMatch[1]);
+    const lng = parseFloat(urlMatch[3]);
+    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+  }
+
+  // 3. Any pair of two floating point numbers separated by comma
+  const genericMatch = str.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+  if (genericMatch) {
+    const lat = parseFloat(genericMatch[1]);
+    const lng = parseFloat(genericMatch[2]);
+    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+  }
+
+  return null;
+}
+
+/**
+ * Calculates distance in meters between two lat/lng points using Haversine formula
+ */
+export function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+  if (
+    lat1 === undefined ||
+    lon1 === undefined ||
+    lat2 === undefined ||
+    lon2 === undefined ||
+    isNaN(lat1) ||
+    isNaN(lon1) ||
+    isNaN(lat2) ||
+    isNaN(lon2)
+  ) {
+    return null;
+  }
+  const R = 6371e3; // Earth radius in meters
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const deltaPhi = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLambda = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+    Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return Math.round(R * c);
+}
+
+/**
+ * Formats distance in meters into friendly Telugu + English representation
+ */
+export function formatDistance(meters) {
+  if (meters === null || meters === undefined || isNaN(meters)) return "లొకేషన్ లేదు";
+  if (meters < 1000) {
+    return `${meters} మీటర్లు (${meters}m)`;
+  }
+  const km = (meters / 1000).toFixed(1);
+  return `${km} కి.మీ (${km}km)`;
+}

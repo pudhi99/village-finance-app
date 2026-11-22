@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Calendar,
   Sparkles,
+  Compass,
 } from 'lucide-react';
 import { formatINR } from '@/lib/utils';
 
@@ -38,12 +39,21 @@ export default function DashboardView({ data, onNavigate, onOpenAddCustomer }) {
                 ఎదుర్లంక & కొత్తపల్లి మైక్రోఫైనాన్స్ లెక్కల వివరాలు
               </p>
             </div>
-            <button
-              onClick={() => onOpenAddCustomer('ఎదుర్లంక (Edurlanka)')}
-              className="self-start sm:self-auto px-4 py-2.5 bg-white dark:bg-emerald-500 text-teal-950 dark:text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg dark:shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:bg-teal-50 dark:hover:bg-emerald-400 active:scale-95 transition-all flex items-center space-x-1.5"
-            >
-              <span>+ కొత్త ఖాతా చేర్చండి</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+              <button
+                onClick={() => onNavigate('line')}
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs sm:text-sm rounded-xl shadow-lg dark:shadow-[0_0_20px_rgba(16,185,129,0.4)] active:scale-95 transition-all flex items-center space-x-1.5"
+              >
+                <Compass className="w-4 h-4" />
+                <span>🚀 లైన్ కలెక్షన్స్ & GPS రాడార్</span>
+              </button>
+              <button
+                onClick={() => onOpenAddCustomer('ఎదుర్లంక (Edurlanka)')}
+                className="px-3.5 py-2.5 bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm rounded-xl border border-white/20 active:scale-95 transition-all flex items-center space-x-1.5"
+              >
+                <span>+ కొత్త ఖాతా</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

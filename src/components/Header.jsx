@@ -16,6 +16,7 @@ export default function Header({
 }) {
   const tabs = [
     { id: 'dashboard', labelTe: 'డాష్‌బోర్డ్', labelEn: 'Dashboard' },
+    { id: 'line', labelTe: 'లైన్ కలెక్షన్స్ (GPS)', labelEn: 'Line Mode', isSpecial: true },
     { id: 'edurlanka', labelTe: 'ఎదుర్లంక', labelEn: 'Edurlanka' },
     { id: 'kothapalli', labelTe: 'కొత్తపల్లి', labelEn: 'Kothapalli' },
     { id: 'ledger', labelTe: 'ఖాతా లెక్కలు', labelEn: 'Ledger' },
@@ -64,7 +65,10 @@ export default function Header({
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800/80'
                 }`}
               >
-                <span>{tab.labelTe}</span>
+                <span className="flex items-center space-x-1">
+                  {tab.isSpecial && <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1" />}
+                  <span>{tab.labelTe}</span>
+                </span>
                 <span className="text-[10px] opacity-75 ml-1">({tab.labelEn})</span>
               </button>
             );

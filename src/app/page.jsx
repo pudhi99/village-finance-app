@@ -7,6 +7,7 @@ import DashboardView from '@/components/DashboardView';
 import VillageView from '@/components/VillageView';
 import LedgerView from '@/components/LedgerView';
 import InvestmentsView from '@/components/InvestmentsView';
+import LineCollectionSystem from '@/components/LineCollectionSystem';
 import CollectionModal from '@/components/CollectionModal';
 import AddCustomerModal from '@/components/AddCustomerModal';
 import EditCustomerModal from '@/components/EditCustomerModal';
@@ -285,6 +286,16 @@ export default function Home() {
                 data={dashboardData}
                 onNavigate={setActiveTab}
                 onOpenAddCustomer={handleOpenAddCustomer}
+              />
+            )}
+
+            {activeTab === 'line' && (
+              <LineCollectionSystem
+                edurlankaData={edurlankaData}
+                kothapalliData={kothapalliData}
+                onOpenCollection={handleOpenCollection}
+                onRefresh={() => loadAllData(true)}
+                onViewPhoto={handleViewPhoto}
               />
             )}
 
