@@ -145,11 +145,12 @@ export default function Home() {
   }, [loadAllData]);
 
   // Modal handlers
-  const handleOpenCollection = (customer, sheetTitle) => {
+  const handleOpenCollection = (customer, sheetTitle, defaultColIndex = null) => {
     setCollectionModalState({
       isOpen: true,
       customer,
       sheetTitle,
+      defaultColIndex,
     });
   };
 
@@ -344,9 +345,10 @@ export default function Home() {
       {/* Modals */}
       <CollectionModal
         isOpen={collectionModalState.isOpen}
-        onClose={() => setCollectionModalState({ isOpen: false, customer: null, sheetTitle: '' })}
+        onClose={() => setCollectionModalState({ isOpen: false, customer: null, sheetTitle: '', defaultColIndex: null })}
         customer={collectionModalState.customer}
         sheetTitle={collectionModalState.sheetTitle}
+        defaultColIndex={collectionModalState.defaultColIndex}
         weekColumns={
           collectionModalState.sheetTitle?.includes('కొత్తపల్లి')
             ? kothapalliData?.weekColumns

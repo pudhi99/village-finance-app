@@ -314,8 +314,26 @@ export async function addNewWeekColumn({ sheetTitle, weekLabel }) {
   const spreadsheetId = getSpreadsheetId();
   const sheetId = await getSheetIdByTitle(sheetTitle);
 
-  // First inspect headers to find remarksColIdx
+  // First inspect headers to check if weekLabel already exists
   const villageData = await getVillageData(sheetTitle);
+  const existingCol = (villageData.weekColumns || []).find((w) => {
+    if (!w || !w.header) return false;
+    if (w.header === weekLabel) return true;
+    // Extract date inside parentheses if present e.g. "28/11/26"
+    const m = String(weekLabel).match(/\(([^)]+)\)/);
+    if (m && w.header.includes(m[1])) return true;
+    return false;
+  });
+
+  if (existingCol) {
+    return {
+      success: true,
+      insertedColIndex: existingCol.colIndex,
+      weekLabel: existingCol.header,
+      alreadyExisted: true,
+    };
+  }
+
   const insertColIdx = villageData.remarksColIdx; // Insert before remarks
 
   // Insert column using batchUpdate insertDimension

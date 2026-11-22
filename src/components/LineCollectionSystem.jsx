@@ -31,7 +31,9 @@ import {
   calculateDistanceMeters,
   formatDistance,
   getMonthlyCustomerStatus,
-  isWeekApplicableForCustomer
+  isWeekApplicableForCustomer,
+  getSaturdayDateInfo,
+  resolveSaturdayWeekHeader
 } from '@/lib/utils';
 import { getSchemeByFaceValue } from '@/lib/schemes';
 
@@ -42,6 +44,13 @@ export default function LineCollectionSystem({
   onRefresh,
   onViewPhoto,
 }) {
+  // Line Active Session State (Saturday Live Line)
+  const [isLineActive, setIsLineActive] = useState(false);
+  const [activeLineWeek, setActiveLineWeek] = useState(null); // e.g. "7 (21/11/26)" or "8 (28/11/26)"
+  const [lineStartedAt, setLineStartedAt] = useState(null);
+  const [showSaturdayConfirmModal, setShowSaturdayConfirmModal] = useState(false);
+  const [isCreatingWeekCol, setIsCreatingWeekCol] = useState(false);
+
   // Line Tracking & GPS State
   const [isTracking, setIsTracking] = useState(false);
   const [userCoords, setUserCoords] = useState(null);
@@ -73,6 +82,15 @@ export default function LineCollectionSystem({
       if (savedTracking === 'true') {
         startTracking();
       }
+
+      const savedActive = localStorage.getItem('village_line_is_active');
+      const savedWeek = localStorage.getItem('village_line_active_week');
+      const savedStartedAt = localStorage.getItem('village_line_started_at');
+      if (savedActive === 'true' && savedWeek) {
+        setIsLineActive(true);
+        setActiveLineWeek(savedWeek);
+        setLineStartedAt(savedStartedAt);
+      }
     } catch (e) {
       console.error('Error loading saved line state:', e);
     }
@@ -81,6 +99,82 @@ export default function LineCollectionSystem({
   const showToastMsg = (msg) => {
     setToast(msg);
     setTimeout(() => setToast(''), 3500);
+  };
+
+  // Start Saturday Line Button Click (Checks if today is Saturday)
+  const handleStartLineClick = () => {
+    const { isSaturday } = getSaturdayDateInfo();
+    if (!isSaturday) {
+      // Not Saturday. Show confirmation modal so user can test if desired.
+      setShowSaturdayConfirmModal(true);
+      return;
+    }
+    executeStartLineSession();
+  };
+
+  // Execute Line Session Start (creates column if needed, activates session)
+  const executeStartLineSession = async () => {
+    setShowSaturdayConfirmModal(false);
+    setIsCreatingWeekCol(true);
+
+    try {
+      // 1. Inspect existing week columns from both villages
+      const allWeekCols = [
+        ...(edurlankaData?.weekColumns || []),
+        ...(kothapalliData?.weekColumns || []),
+      ];
+
+      // 2. Resolve Saturday date and week header
+      const resolved = resolveSaturdayWeekHeader(allWeekCols);
+
+      // 3. If column for this Saturday does not exist yet, create it in both village sheets!
+      if (resolved.isNew) {
+        const res = await fetch('/api/week', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sheetTitle: 'all',
+            weekLabel: resolved.header,
+          }),
+        });
+        const resData = await res.json();
+        if (!resData.success) {
+          throw new Error(resData.error || 'Failed to create new Saturday week column');
+        }
+        if (onRefresh) await onRefresh();
+      }
+
+      // 4. Activate Line Session
+      setIsLineActive(true);
+      setActiveLineWeek(resolved.header);
+      const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      setLineStartedAt(timeStr);
+
+      localStorage.setItem('village_line_is_active', 'true');
+      localStorage.setItem('village_line_active_week', resolved.header);
+      localStorage.setItem('village_line_started_at', timeStr);
+
+      // Start GPS
+      startTracking();
+      showToastMsg(`శనివారం కలెక్షన్ లైన్ ప్రారంభమైంది (${resolved.header})! 🚀`);
+    } catch (err) {
+      console.error('Error starting line session:', err);
+      alert('లైన్ ప్రారంభించడంలో లోపం: ' + err.message);
+    } finally {
+      setIsCreatingWeekCol(false);
+    }
+  };
+
+  // Conclude Saturday Line Session
+  const handleEndLineSession = () => {
+    if (!confirm('ఈ రోజు శనివారం కలెక్షన్ లైన్ ముగించాలనుకుంటున్నారా?')) return;
+    setIsLineActive(false);
+    setActiveLineWeek(null);
+    setLineStartedAt(null);
+    localStorage.removeItem('village_line_is_active');
+    localStorage.removeItem('village_line_active_week');
+    localStorage.removeItem('village_line_started_at');
+    showToastMsg('శనివారం లైన్ విజయవంతంగా ముగిసింది! ✅');
   };
 
   // Start live GPS tracking (HTML5 Geolocation watchPosition - 100% Free)
@@ -209,23 +303,33 @@ export default function LineCollectionSystem({
       installmentAmt = customer.amount === 14000 ? 1400 : 2100;
     }
 
-    // Determine target week column index
+    // Determine target week column index:
+    // If Saturday Line is active, target the active Saturday column!
     let targetColIndex = null;
-    const applicableWeeks = (weekColumns || []).filter((wk) => {
-      const p = customer.weeklyPayments?.find((pay) => pay.colIndex === wk.colIndex);
-      return isWeekApplicableForCustomer(wk.header, customer.date, p && p.amount > 0);
-    });
-
-    for (const wk of applicableWeeks) {
-      const p = customer.weeklyPayments?.find((pay) => pay.colIndex === wk.colIndex);
-      if (!p || p.amount === 0) {
-        targetColIndex = wk.colIndex;
-        break;
+    if (isLineActive && activeLineWeek) {
+      const activeCol = (weekColumns || []).find((wk) => wk.header === activeLineWeek);
+      if (activeCol) {
+        targetColIndex = activeCol.colIndex;
       }
     }
 
     if (targetColIndex === null) {
-      targetColIndex = weekColumns?.[weekColumns.length - 1]?.colIndex;
+      const applicableWeeks = (weekColumns || []).filter((wk) => {
+        const p = customer.weeklyPayments?.find((pay) => pay.colIndex === wk.colIndex);
+        return isWeekApplicableForCustomer(wk.header, customer.date, p && p.amount > 0);
+      });
+
+      for (const wk of applicableWeeks) {
+        const p = customer.weeklyPayments?.find((pay) => pay.colIndex === wk.colIndex);
+        if (!p || p.amount === 0) {
+          targetColIndex = wk.colIndex;
+          break;
+        }
+      }
+
+      if (targetColIndex === null) {
+        targetColIndex = weekColumns?.[weekColumns.length - 1]?.colIndex;
+      }
     }
 
     if (targetColIndex === null || targetColIndex === undefined) {
@@ -263,6 +367,18 @@ export default function LineCollectionSystem({
     }
   };
 
+  // Open custom collection modal targeting active Saturday column if line is active
+  const handleOpenCustomCollection = (customer, sheetTitle, weekColumns) => {
+    let targetColIndex = null;
+    if (isLineActive && activeLineWeek) {
+      const activeCol = (weekColumns || []).find((wk) => wk.header === activeLineWeek);
+      if (activeCol) {
+        targetColIndex = activeCol.colIndex;
+      }
+    }
+    onOpenCollection(customer, sheetTitle, targetColIndex);
+  };
+
   // Compile unified list of customers across villages with GPS distance
   const processedCustomers = useMemo(() => {
     const list = [];
@@ -289,35 +405,77 @@ export default function LineCollectionSystem({
 
         // Scheme & Due calculation
         const scheme = getSchemeByFaceValue(cust.amount);
-        let isDueToday = false;
-        let dueBadgeText = '';
         let dueAmount = scheme?.installment || 500;
-
         if (cust.isMonthly) {
-          const st = getMonthlyCustomerStatus(cust, 20261121);
-          isDueToday = cust.remainingDue > 0 && (st?.isDueThisSaturday || false);
-          dueBadgeText = cust.remainingDue <= 0 ? 'మొత్తం పూర్తయింది' : (st?.badgeTe || 'నెల స్కీమ్');
           dueAmount = cust.amount === 14000 ? 1400 : 2100;
-        } else {
-          // Weekly scheme: check if has unpaid applicable installment
-          const applicable = (cust.weeklyPayments || []).filter((p) =>
-            isWeekApplicableForCustomer(p.weekHeader, cust.date, p.amount > 0)
-          );
-          const hasUnpaid = applicable.some((p) => p.amount === 0) || applicable.length === 0;
-          isDueToday = cust.remainingDue > 0 && hasUnpaid;
-          const paidWeeks = applicable.filter((p) => p.amount > 0).length;
-          if (cust.remainingDue <= 0) {
-            dueBadgeText = 'మొత్తం పూర్తయింది';
-          } else if (!isDueToday) {
-            dueBadgeText = `${paidWeeks}వ వారం వరకు చెల్లించారు`;
-          } else {
-            dueBadgeText = `${paidWeeks + 1}వ వారం బాకీ`;
-          }
         }
 
         const followUp = followUps[customerKey];
         const isPromised = !!followUp;
-        const isCollected = cust.remainingDue <= 0 || !isDueToday;
+
+        // Check if customer paid in the active Saturday column
+        let todayPayment = null;
+        let todayPaidAmount = 0;
+        let todayPaymentMode = 'Cash';
+        let isCollectedToday = false;
+
+        if (isLineActive && activeLineWeek) {
+          todayPayment = (cust.weeklyPayments || []).find((p) => p.weekHeader === activeLineWeek);
+          if (todayPayment && todayPayment.amount > 0) {
+            todayPaidAmount = todayPayment.amount;
+            todayPaymentMode = todayPayment.isUPI ? 'UPI' : 'నగదు';
+            isCollectedToday = true;
+          }
+        }
+
+        let isDueToday = false;
+        let dueBadgeText = '';
+
+        if (isLineActive) {
+          // DURING ACTIVE SATURDAY LINE:
+          // Status is based on TODAY'S collection progress!
+          if (cust.remainingDue <= 0 && !isCollectedToday) {
+            isDueToday = false;
+            dueBadgeText = 'మొత్తం పూర్తయింది';
+          } else if (isCollectedToday) {
+            isDueToday = false;
+            dueBadgeText = `✅ ఈ రోజు వసూలైంది (₹${todayPaidAmount})`;
+          } else if (isPromised) {
+            isDueToday = true;
+            dueBadgeText = `⏱ తర్వాత ఇస్తామన్నారు (${followUp.note})`;
+          } else {
+            isDueToday = cust.remainingDue > 0;
+            if (cust.isMonthly) {
+              const st = getMonthlyCustomerStatus(cust, 20261121);
+              dueBadgeText = st?.badgeTe || 'నెల శనివారం బాకీ';
+            } else {
+              dueBadgeText = 'ఈ వారం వసూలు చేయాలి';
+            }
+          }
+        } else {
+          // BEFORE LINE IS STARTED (Normal overview mode):
+          if (cust.isMonthly) {
+            const st = getMonthlyCustomerStatus(cust, 20261121);
+            isDueToday = cust.remainingDue > 0 && (st?.isDueThisSaturday || false);
+            dueBadgeText = cust.remainingDue <= 0 ? 'మొత్తం పూర్తయింది' : (st?.badgeTe || 'నెల స్కీమ్');
+          } else {
+            const applicable = (cust.weeklyPayments || []).filter((p) =>
+              isWeekApplicableForCustomer(p.weekHeader, cust.date, p.amount > 0)
+            );
+            const hasUnpaid = applicable.some((p) => p.amount === 0) || applicable.length === 0;
+            isDueToday = cust.remainingDue > 0 && hasUnpaid;
+            const paidWeeks = applicable.filter((p) => p.amount > 0).length;
+            if (cust.remainingDue <= 0) {
+              dueBadgeText = 'మొత్తం పూర్తయింది';
+            } else if (!isDueToday) {
+              dueBadgeText = `${paidWeeks}వ వారం వరకు చెల్లించారు`;
+            } else {
+              dueBadgeText = `${paidWeeks + 1}వ వారం బాకీ`;
+            }
+          }
+        }
+
+        const isCollected = isLineActive ? isCollectedToday : (cust.remainingDue <= 0 || !isDueToday);
 
         list.push({
           ...cust,
@@ -334,6 +492,9 @@ export default function LineCollectionSystem({
           followUp,
           isPromised,
           isCollected,
+          isCollectedToday,
+          todayPaidAmount,
+          todayPaymentMode,
         });
       });
     };
@@ -356,7 +517,7 @@ export default function LineCollectionSystem({
     });
 
     return list;
-  }, [edurlankaData, kothapalliData, villageFilter, userCoords, followUps]);
+  }, [edurlankaData, kothapalliData, villageFilter, userCoords, followUps, isLineActive, activeLineWeek]);
 
   // Filter processed customers
   const filteredCustomers = useMemo(() => {
@@ -378,6 +539,26 @@ export default function LineCollectionSystem({
       }
 
       // 3. Type Filter
+      if (isLineActive) {
+        if (typeFilter === 'due_only') {
+          return c.isDueToday && !c.isCollectedToday && !c.isPromised;
+        }
+        if (typeFilter === 'collected') {
+          return c.isCollectedToday;
+        }
+        if (typeFilter === 'promised') {
+          return c.isPromised && !c.isCollectedToday;
+        }
+        if (typeFilter === 'all_gps') {
+          return c.hasGPS;
+        }
+        if (typeFilter === 'no_gps') {
+          return !c.hasGPS;
+        }
+        return true;
+      }
+
+      // Normal mode (before line starts):
       if (typeFilter === 'due_only') {
         return c.isDueToday && !c.isPromised;
       }
@@ -402,7 +583,7 @@ export default function LineCollectionSystem({
 
       return true;
     });
-  }, [processedCustomers, searchQuery, radiusFilter, typeFilter]);
+  }, [processedCustomers, searchQuery, radiusFilter, typeFilter, isLineActive]);
 
   // Dedicated Map customer list (shows all customers who have GPS, with optional due-only filter)
   const mapCustomers = useMemo(() => {
@@ -427,15 +608,42 @@ export default function LineCollectionSystem({
 
       // map filter toggle
       if (mapFilterMode === 'due_only') {
+        if (isLineActive) {
+          return c.isDueToday && !c.isCollectedToday;
+        }
         return c.isDueToday;
       }
 
       return true;
     });
-  }, [processedCustomers, searchQuery, radiusFilter, mapFilterMode]);
+  }, [processedCustomers, searchQuery, radiusFilter, mapFilterMode, isLineActive]);
 
   // Counts for top chips
   const counts = useMemo(() => {
+    if (isLineActive) {
+      const todayCollected = processedCustomers.filter((c) => c.isCollectedToday);
+      const todayCollectedCount = todayCollected.length;
+      const todayCollectedTotal = todayCollected.reduce((sum, c) => sum + (c.todayPaidAmount || 0), 0);
+      const todayPromisedCount = processedCustomers.filter((c) => c.isPromised && !c.isCollectedToday).length;
+      const todayPendingCount = processedCustomers.filter((c) => c.isDueToday && !c.isCollectedToday && !c.isPromised).length;
+      const withGpsCount = processedCustomers.filter((c) => c.hasGPS).length;
+      const noGpsCount = processedCustomers.filter((c) => !c.hasGPS).length;
+      const within100m = processedCustomers.filter((c) => c.distanceMeters !== null && c.distanceMeters <= 100).length;
+
+      return {
+        totalDue: todayPendingCount,
+        weeklyDue: processedCustomers.filter((c) => !c.isMonthly && c.isDueToday && !c.isCollectedToday).length,
+        monthlyDue: processedCustomers.filter((c) => c.isMonthly && c.isDueToday && !c.isCollectedToday).length,
+        promisedCount: todayPromisedCount,
+        todayCollectedCount,
+        todayCollectedTotal,
+        todayPendingCount,
+        withGpsCount,
+        noGpsCount,
+        within100m,
+      };
+    }
+
     const totalDue = processedCustomers.filter((c) => c.isDueToday).length;
     const weeklyDue = processedCustomers.filter((c) => !c.isMonthly && c.isDueToday).length;
     const monthlyDue = processedCustomers.filter((c) => c.isMonthly && c.isDueToday).length;
@@ -444,8 +652,19 @@ export default function LineCollectionSystem({
     const noGpsCount = processedCustomers.filter((c) => !c.hasGPS).length;
     const within100m = processedCustomers.filter((c) => c.distanceMeters !== null && c.distanceMeters <= 100).length;
 
-    return { totalDue, weeklyDue, monthlyDue, promisedCount, withGpsCount, noGpsCount, within100m };
-  }, [processedCustomers, followUps]);
+    return {
+      totalDue,
+      weeklyDue,
+      monthlyDue,
+      promisedCount,
+      todayCollectedCount: 0,
+      todayCollectedTotal: 0,
+      todayPendingCount: totalDue,
+      withGpsCount,
+      noGpsCount,
+      within100m,
+    };
+  }, [processedCustomers, followUps, isLineActive]);
 
   return (
     <div className="space-y-4 pb-24 pt-1 animate-fadeIn">
@@ -457,94 +676,257 @@ export default function LineCollectionSystem({
         </div>
       )}
 
-      {/* Hero Line Control Bar */}
-      <div className="bg-gradient-to-r from-[#0E1E38] via-[#0D2826] to-[#0A0F1D] rounded-2xl p-4 sm:p-5 border border-teal-500/30 shadow-xl dark:shadow-[0_4px_30px_rgba(20,184,166,0.15)] text-white">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <div className="flex items-center space-x-2">
-              <span
-                className={`w-3 h-3 rounded-full ${
-                  isTracking
-                    ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)] animate-pulse'
-                    : 'bg-slate-500'
-                }`}
-              />
-              <h2 className="text-lg sm:text-xl font-black tracking-tight flex items-center space-x-2">
-                <span>లైన్ కలెక్షన్స్ & లైవ్ GPS రాడార్</span>
-              </h2>
+      {/* Saturday Confirmation Modal for Non-Saturday testing */}
+      {showSaturdayConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-[#0D1527] border border-amber-300 dark:border-amber-500/40 rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">
+                  శనివారం కలెక్షన్ లైన్ (Saturday Line)
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 font-medium leading-relaxed">
+                  ఈ లైన్ శనివారం కలెక్షన్ల కోసం రూపొందించబడింది. ఈ రోజు శనివారం కాదు.
+                  <br />
+                  మీరు టెస్టింగ్ కోసం ఈ రోజు శనివారంగా భావించి లైన్ ప్రారంభించాలనుకుంటున్నారా?
+                </p>
+                <p className="text-[11px] text-amber-700 dark:text-amber-400 font-bold mt-2 bg-amber-50 dark:bg-amber-500/15 p-2 rounded-lg border border-amber-200 dark:border-amber-500/30">
+                  ⚡ ప్రారంభించగానే ఈ శనివారం డేట్‌తో షీట్‌లో కాలమ్ సిద్ధమవుతుంది, వసూళ్లన్నీ ఆ కాలంలో నమోదవుతాయి.
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-teal-200/90 mt-1 font-medium">
-              {isTracking ? (
-                <span className="flex items-center space-x-1.5 text-emerald-300 font-bold">
-                  <LocateFixed className="w-3.5 h-3.5 animate-spin" />
-                  <span>GPS యాక్టివ్ • ఖచ్చితత్వం: ±{gpsAccuracy || 5} మీటర్లు</span>
-                  {counts.within100m > 0 && (
-                    <span className="ml-2 bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                      చుట్టూ 100 మీటర్లలో {counts.within100m} ఖాతాలు ఉన్నాయి!
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <span>శనివారం లైన్ ప్రారంభించడానికి &apos;లైన్ ప్రారంభించు&apos; క్లిక్ చేయండి</span>
-              )}
-            </p>
-            {gpsError && (
-              <p className="text-[11px] text-amber-300 bg-amber-950/60 p-1.5 rounded-lg border border-amber-800/60 mt-1 flex items-center space-x-1">
-                <AlertCircle className="w-3 h-3 shrink-0" />
-                <span>{gpsError}</span>
-              </p>
-            )}
+
+            <div className="flex items-center justify-end space-x-2 pt-2 border-t border-slate-100 dark:border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setShowSaturdayConfirmModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+              >
+                రద్దు చేయి (Cancel)
+              </button>
+              <button
+                type="button"
+                onClick={executeStartLineSession}
+                disabled={isCreatingWeekCol}
+                className="px-4 py-2 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-950/20 active:scale-95 transition-all flex items-center space-x-1.5"
+              >
+                {isCreatingWeekCol ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>కాలమ్ తయారవుతోంది...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>టెస్టింగ్ లైన్ ప్రారంభించు ➔</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+        </div>
+      )}
 
-          {/* Action buttons: Start/Stop line + View Switcher */}
-          <div className="flex items-center space-x-2 self-start sm:self-auto">
-            {/* View Mode Toggle (Radar List vs Map) */}
-            <div className="flex items-center p-0.5 bg-black/40 rounded-xl border border-white/[0.08]">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all ${
-                  viewMode === 'list'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <List className="w-3.5 h-3.5" />
-                <span>రాడార్ లిస్ట్</span>
-              </button>
-              <button
-                onClick={() => setViewMode('map')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all ${
-                  viewMode === 'map'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <MapIcon className="w-3.5 h-3.5" />
-                <span>లైవ్ మ్యాప్</span>
-              </button>
+      {/* Hero Line Control Bar */}
+      {isLineActive ? (
+        /* ACTIVE SATURDAY LINE SESSION BANNER */
+        <div className="bg-gradient-to-r from-[#0E1E38] via-[#0A2624] to-[#0D1527] rounded-2xl p-4 sm:p-5 border border-emerald-500/40 shadow-xl dark:shadow-[0_4px_30px_rgba(16,185,129,0.2)] text-white space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)] animate-pulse" />
+                <h2 className="text-lg sm:text-xl font-black tracking-tight flex items-center space-x-2">
+                  <span>లైవ్ శనివారం లైన్ రన్ అవుతోంది</span>
+                  <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-black">
+                    {activeLineWeek}
+                  </span>
+                </h2>
+              </div>
+              <p className="text-xs text-teal-200/90 mt-1 font-medium flex flex-wrap items-center gap-2">
+                <span className="flex items-center space-x-1 text-emerald-300 font-bold">
+                  <LocateFixed className="w-3.5 h-3.5 animate-spin" />
+                  <span>GPS యాక్టివ్ ±{gpsAccuracy || 5}m</span>
+                </span>
+                <span>• ప్రారంభ సమయం: {lineStartedAt || 'ఈ రోజు'}</span>
+                {counts.within100m > 0 && (
+                  <span className="bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-500/30 font-bold">
+                    చుట్టూ 100 మీటర్లలో {counts.within100m} ఖాతాలు ఉన్నాయి!
+                  </span>
+                )}
+              </p>
             </div>
 
-            {/* Primary Start / Stop Line Button */}
-            {isTracking ? (
+            {/* Action buttons: View Switcher + End Line */}
+            <div className="flex items-center space-x-2 self-start sm:self-auto">
+              {/* View Mode Toggle */}
+              <div className="flex items-center p-0.5 bg-black/40 rounded-xl border border-white/[0.08]">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all ${
+                    viewMode === 'list'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>రాడార్ లిస్ట్</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('map')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all ${
+                    viewMode === 'map'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <MapIcon className="w-3.5 h-3.5" />
+                  <span>లైవ్ మ్యాప్</span>
+                </button>
+              </div>
+
+              {/* End Line Button */}
               <button
-                onClick={stopTracking}
+                onClick={handleEndLineSession}
                 className="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl shadow-lg shadow-rose-950/40 flex items-center space-x-1.5 active:scale-95 transition-all"
               >
                 <Square className="w-3.5 h-3.5 fill-current" />
-                <span>లైన్ ఆపు (Stop)</span>
+                <span>లైన్ ముగించు (End)</span>
               </button>
-            ) : (
-              <button
-                onClick={startTracking}
-                className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/30 flex items-center space-x-1.5 active:scale-95 transition-all"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>లైన్ ప్రారంభించు (Start Line)</span>
-              </button>
-            )}
+            </div>
+          </div>
+
+          {/* Live Metric Summary Chips for Today's Saturday Line */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t border-white/[0.1] text-xs">
+            <div className="bg-black/30 p-2.5 rounded-xl border border-white/[0.08]">
+              <span className="text-[10px] text-teal-300 font-bold block">ఈ రోజు వసూలు:</span>
+              <span className="text-base font-black text-emerald-400">
+                {formatINR(counts.todayCollectedTotal)}
+              </span>
+              <span className="text-[10px] text-slate-400 ml-1 font-semibold">
+                ({counts.todayCollectedCount} ఖాతాలు)
+              </span>
+            </div>
+            <div className="bg-black/30 p-2.5 rounded-xl border border-white/[0.08]">
+              <span className="text-[10px] text-amber-300 font-bold block">ఇంకా వసూలు కావాల్సినవి:</span>
+              <span className="text-base font-black text-amber-400">
+                {counts.todayPendingCount}
+              </span>
+              <span className="text-[10px] text-slate-400 ml-1 font-semibold">ఖాతాలు</span>
+            </div>
+            <div className="bg-black/30 p-2.5 rounded-xl border border-white/[0.08]">
+              <span className="text-[10px] text-purple-300 font-bold block">తర్వాత రమ్మన్నవి:</span>
+              <span className="text-base font-black text-purple-400">
+                {counts.promisedCount}
+              </span>
+              <span className="text-[10px] text-slate-400 ml-1 font-semibold">ఖాతాలు</span>
+            </div>
+            <div className="bg-black/30 p-2.5 rounded-xl border border-white/[0.08]">
+              <span className="text-[10px] text-blue-300 font-bold block">లైన్ ప్రగతి:</span>
+              <span className="text-base font-black text-white">
+                {counts.todayCollectedCount + counts.todayPendingCount > 0
+                  ? Math.round(
+                      (counts.todayCollectedCount / (counts.todayCollectedCount + counts.todayPendingCount)) * 100
+                    )
+                  : 0}
+                %
+              </span>
+              <span className="text-[10px] text-slate-400 ml-1 font-semibold">పూర్తయింది</span>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        /* NORMAL OVERVIEW HERO BAR (Before Line Starts) */
+        <div className="bg-gradient-to-r from-[#0E1E38] via-[#0D2826] to-[#0A0F1D] rounded-2xl p-4 sm:p-5 border border-teal-500/30 shadow-xl dark:shadow-[0_4px_30px_rgba(20,184,166,0.15)] text-white">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span
+                  className={`w-3 h-3 rounded-full ${
+                    isTracking
+                      ? 'bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.9)] animate-pulse'
+                      : 'bg-slate-500'
+                  }`}
+                />
+                <h2 className="text-lg sm:text-xl font-black tracking-tight flex items-center space-x-2">
+                  <span>లైన్ కలెక్షన్స్ & లైవ్ GPS రాడార్</span>
+                </h2>
+              </div>
+              <p className="text-xs text-teal-200/90 mt-1 font-medium">
+                {isTracking ? (
+                  <span className="flex items-center space-x-1.5 text-emerald-300 font-bold">
+                    <LocateFixed className="w-3.5 h-3.5 animate-spin" />
+                    <span>GPS యాక్టివ్ • ఖచ్చితత్వం: ±{gpsAccuracy || 5} మీటర్లు</span>
+                    {counts.within100m > 0 && (
+                      <span className="ml-2 bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                        చుట్టూ 100 మీటర్లలో {counts.within100m} ఖాతాలు ఉన్నాయి!
+                      </span>
+                    )}
+                  </span>
+                ) : (
+                  <span>శనివారం లైన్ ప్రారంభించడానికి &apos;శనివారం లైన్ ప్రారంభించు&apos; క్లిక్ చేయండి</span>
+                )}
+              </p>
+              {gpsError && (
+                <p className="text-[11px] text-amber-300 bg-amber-950/60 p-1.5 rounded-lg border border-amber-800/60 mt-1 flex items-center space-x-1">
+                  <AlertCircle className="w-3 h-3 shrink-0" />
+                  <span>{gpsError}</span>
+                </p>
+              )}
+            </div>
+
+            {/* Action buttons: Start line + View Switcher */}
+            <div className="flex items-center space-x-2 self-start sm:self-auto">
+              {/* View Mode Toggle */}
+              <div className="flex items-center p-0.5 bg-black/40 rounded-xl border border-white/[0.08]">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all ${
+                    viewMode === 'list'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                  <span>రాడార్ లిస్ట్</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('map')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1 transition-all ${
+                    viewMode === 'map'
+                      ? 'bg-emerald-500 text-slate-950 shadow-md font-black'
+                      : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  <MapIcon className="w-3.5 h-3.5" />
+                  <span>లైవ్ మ్యాప్</span>
+                </button>
+              </div>
+
+              {/* Start Saturday Line Button */}
+              <button
+                onClick={handleStartLineClick}
+                disabled={isCreatingWeekCol}
+                className="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-lg shadow-emerald-500/30 flex items-center space-x-1.5 active:scale-95 transition-all disabled:opacity-50"
+              >
+                {isCreatingWeekCol ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>సిద్ధమవుతోంది...</span>
+                  </>
+                ) : (
+                  <>
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>శనివారం లైన్ ప్రారంభించు</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Promised Follow-Up Bar (లైన్ చివరలో కాల్ చేయాల్సినవి) */}
       {counts.promisedCount > 0 && (
@@ -682,76 +1064,143 @@ export default function LineCollectionSystem({
 
         {/* Due & Scheme Type Filter Pills */}
         <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-          <button
-            onClick={() => setTypeFilter('due_only')}
-            className={`px-3 py-1.5 rounded-xl font-black whitespace-nowrap transition-all border ${
-              typeFilter === 'due_only'
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-950/20'
-                : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08]'
-            }`}
-          >
-            🔥 బాకీ ఉన్నవారు ({counts.totalDue})
-          </button>
-          <button
-            onClick={() => setTypeFilter('weekly')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
-              typeFilter === 'weekly'
-                ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
-                : 'bg-white dark:bg-[#0D1527] text-teal-700 dark:text-teal-300 border-slate-200 dark:border-white/[0.08]'
-            }`}
-          >
-            వారం బాకీ ({counts.weeklyDue})
-          </button>
-          <button
-            onClick={() => setTypeFilter('monthly_due')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
-              typeFilter === 'monthly_due'
-                ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                : 'bg-white dark:bg-[#0D1527] text-amber-700 dark:text-amber-300 border-slate-200 dark:border-white/[0.08]'
-            }`}
-          >
-            నెల శనివారం బాకీ ({counts.monthlyDue})
-          </button>
-          <button
-            onClick={() => setTypeFilter('promised')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
-              typeFilter === 'promised'
-                ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
-                : 'bg-white dark:bg-[#0D1527] text-purple-700 dark:text-purple-300 border-slate-200 dark:border-white/[0.08]'
-            }`}
-          >
-            తర్వాత ఇస్తామన్నవి ({counts.promisedCount})
-          </button>
-          <button
-            onClick={() => setTypeFilter('all_gps')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
-              typeFilter === 'all_gps'
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-white dark:bg-[#0D1527] text-blue-700 dark:text-blue-300 border-slate-200 dark:border-white/[0.08]'
-            }`}
-          >
-            📍 లొకేషన్ ఉన్నవారు ({counts.withGpsCount})
-          </button>
-          <button
-            onClick={() => setTypeFilter('no_gps')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
-              typeFilter === 'no_gps'
-                ? 'bg-slate-700 text-white border-slate-700 shadow-sm'
-                : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08]'
-            }`}
-          >
-            లొకేషన్ లేనివి ({counts.noGpsCount})
-          </button>
-          <button
-            onClick={() => setTypeFilter('all')}
-            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
-              typeFilter === 'all'
-                ? 'bg-slate-700 text-white border-slate-700'
-                : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08]'
-            }`}
-          >
-            అన్ని ఖాతాలు
-          </button>
+          {isLineActive ? (
+            <>
+              <button
+                onClick={() => setTypeFilter('due_only')}
+                className={`px-3 py-1.5 rounded-xl font-black whitespace-nowrap transition-all border ${
+                  typeFilter === 'due_only'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-md shadow-amber-950/20'
+                    : 'bg-white dark:bg-[#0D1527] text-amber-700 dark:text-amber-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                🔥 ఇంకా వసూలు కావాల్సినవి ({counts.todayPendingCount})
+              </button>
+              <button
+                onClick={() => setTypeFilter('collected')}
+                className={`px-3 py-1.5 rounded-xl font-black whitespace-nowrap transition-all border ${
+                  typeFilter === 'collected'
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-950/20'
+                    : 'bg-white dark:bg-[#0D1527] text-emerald-700 dark:text-emerald-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                ✅ ఈ రోజు వసూలైనవి ({counts.todayCollectedCount})
+              </button>
+              <button
+                onClick={() => setTypeFilter('promised')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === 'promised'
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                    : 'bg-white dark:bg-[#0D1527] text-purple-700 dark:text-purple-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                ⏱ తర్వాత రమ్మన్నవి ({counts.promisedCount})
+              </button>
+              <button
+                onClick={() => setTypeFilter('all_gps')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === 'all_gps'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-white dark:bg-[#0D1527] text-blue-700 dark:text-blue-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                📍 లొకేషన్ ఉన్నవారు ({counts.withGpsCount})
+              </button>
+              <button
+                onClick={() => setTypeFilter('no_gps')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === 'no_gps'
+                    ? 'bg-slate-700 text-white border-slate-700 shadow-sm'
+                    : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                లొకేషన్ లేనివి ({counts.noGpsCount})
+              </button>
+              <button
+                onClick={() => setTypeFilter('all')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === 'all'
+                    ? 'bg-slate-700 text-white border-slate-700'
+                    : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                అన్ని ఖాతాలు
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setTypeFilter('due_only')}
+                className={`px-3 py-1.5 rounded-xl font-black whitespace-nowrap transition-all border ${
+                  typeFilter === 'due_only'
+                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-950/20'
+                    : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                🔥 బాకీ ఉన్నవారు ({counts.totalDue})
+              </button>
+              <button
+                onClick={() => setTypeFilter('weekly')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === 'weekly'
+                    ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
+                    : 'bg-white dark:bg-[#0D1527] text-teal-700 dark:text-teal-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                వారం బాకీ ({counts.weeklyDue})
+              </button>
+              <button
+                onClick={() => setTypeFilter('monthly_due')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === 'monthly_due'
+                    ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                    : 'bg-white dark:bg-[#0D1527] text-amber-700 dark:text-amber-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                నెల శనివారం బాకీ ({counts.monthlyDue})
+              </button>
+              <button
+                onClick={() => setTypeFilter('promised')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === 'promised'
+                    ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                    : 'bg-white dark:bg-[#0D1527] text-purple-700 dark:text-purple-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                తర్వాత ఇస్తామన్నవి ({counts.promisedCount})
+              </button>
+              <button
+                onClick={() => setTypeFilter('all_gps')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === 'all_gps'
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-white dark:bg-[#0D1527] text-blue-700 dark:text-blue-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                📍 లొకేషన్ ఉన్నవారు ({counts.withGpsCount})
+              </button>
+              <button
+                onClick={() => setTypeFilter('no_gps')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === 'no_gps'
+                    ? 'bg-slate-700 text-white border-slate-700 shadow-sm'
+                    : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                లొకేషన్ లేనివి ({counts.noGpsCount})
+              </button>
+              <button
+                onClick={() => setTypeFilter('all')}
+                className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+                  typeFilter === 'all'
+                    ? 'bg-slate-700 text-white border-slate-700'
+                    : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08]'
+                }`}
+              >
+                అన్ని ఖాతాలు
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -791,6 +1240,7 @@ export default function LineCollectionSystem({
             userCoords={userCoords}
             customers={mapCustomers}
             villageFilter={villageFilter}
+            isLineActive={isLineActive}
             onOneTapCollection={handleOneTapCollection}
             onMarkFollowUp={handleMarkFollowUp}
             onOpenCollection={onOpenCollection}
@@ -947,28 +1397,41 @@ export default function LineCollectionSystem({
                       </div>
                     </div>
 
-                    {/* RAPID ACTION BUTTONS (1-Tap Collection, Promise, Navigate, Pin GPS) */}
-                    {c.remainingDue <= 0 ? (
+                    {/* RAPID ACTION BUTTONS */}
+                    {isLineActive && c.isCollectedToday ? (
+                      <div className="flex items-center justify-between p-2.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl mt-3 text-xs">
+                        <span className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center space-x-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span>ఈ రోజు వసూలైంది: {formatINR(c.todayPaidAmount)} ({c.todayPaymentMode})</span>
+                        </span>
+                        <button
+                          onClick={() => handleOpenCustomCollection(c, c.sheetTitle, c.weekColumns)}
+                          className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 underline"
+                        >
+                          సవరించు ➔
+                        </button>
+                      </div>
+                    ) : !isLineActive && c.remainingDue <= 0 ? (
                       <div className="flex items-center justify-between p-2.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl mt-3 text-xs">
                         <span className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center space-x-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                           <span>ఈ ఖాతా పూర్తిగా చెల్లించబడింది (No Dues)</span>
                         </span>
                         <button
-                          onClick={() => onOpenCollection(c, c.sheetTitle)}
+                          onClick={() => handleOpenCustomCollection(c, c.sheetTitle, c.weekColumns)}
                           className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 underline"
                         >
                           వివరాలు చూడండి ➔
                         </button>
                       </div>
-                    ) : !c.isDueToday ? (
+                    ) : !isLineActive && !c.isDueToday ? (
                       <div className="flex items-center justify-between p-2.5 bg-slate-100 dark:bg-[#131C30] border border-slate-200 dark:border-white/[0.08] rounded-xl mt-3 text-xs">
                         <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
                           <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                           <span>ఈ వారం వాయిదా చెల్లించారు</span>
                         </span>
                         <button
-                          onClick={() => onOpenCollection(c, c.sheetTitle)}
+                          onClick={() => handleOpenCustomCollection(c, c.sheetTitle, c.weekColumns)}
                           className="text-[11px] font-bold text-teal-600 dark:text-teal-400 underline"
                         >
                           ముందస్తు వసూలు ➔
@@ -1007,7 +1470,7 @@ export default function LineCollectionSystem({
 
                         {/* 4. More Options / Custom Amount */}
                         <button
-                          onClick={() => onOpenCollection(c, c.sheetTitle)}
+                          onClick={() => handleOpenCustomCollection(c, c.sheetTitle, c.weekColumns)}
                           className="py-2 px-2.5 bg-slate-100 dark:bg-[#131C30] hover:bg-slate-200 dark:hover:bg-[#1A2642] text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl border border-slate-200 dark:border-white/[0.08] flex items-center justify-center space-x-1 active:scale-95 transition-all"
                         >
                           <Zap className="w-3.5 h-3.5" />
@@ -1066,6 +1529,7 @@ function InteractiveLeafletMap({
   userCoords,
   customers,
   villageFilter,
+  isLineActive,
   onOneTapCollection,
   onMarkFollowUp,
   onOpenCollection,
@@ -1201,19 +1665,42 @@ function InteractiveLeafletMap({
       if (!c.coords) return;
 
       // Color coding:
-      // Emerald (#10B981) for Weekly Due
-      // Amber (#F59E0B) for Monthly Due
-      // Purple (#9333EA) for Promised
-      // Gray (#64748B) for Paid / Not due
+      // When isLineActive:
+      //   - If collected today: Gray (#64748B) with '✓'
+      //   - If promised: Purple (#9333EA) with '⏱'
+      //   - If monthly due: Amber (#F59E0B) with `#${c.sNo}`
+      //   - If weekly due: Emerald (#10B981) with `#${c.sNo}`
+      //   - If remainingDue <= 0: Gray (#64748B) with '✓'
+      // When !isLineActive:
+      //   - If promised: Purple (#9333EA)
+      //   - If monthly due: Amber (#F59E0B)
+      //   - If fully paid (remainingDue <= 0) or !isDueToday: Gray (#64748B) with '✓'
+      //   - Else weekly due: Emerald (#10B981) with `#${c.sNo}`
       let pinColor = '#10B981';
       let pinText = `#${c.sNo}`;
-      if (c.isPromised) {
-        pinColor = '#9333EA';
-      } else if (c.isMonthly && c.isDueToday) {
-        pinColor = '#F59E0B';
-      } else if (c.remainingDue <= 0 || !c.isDueToday) {
-        pinColor = '#64748B';
-        pinText = '✓';
+
+      if (isLineActive) {
+        if (c.isCollectedToday) {
+          pinColor = '#64748B';
+          pinText = '✓';
+        } else if (c.isPromised) {
+          pinColor = '#9333EA';
+          pinText = '⏱';
+        } else if (c.isMonthly && c.isDueToday) {
+          pinColor = '#F59E0B';
+        } else if (c.remainingDue <= 0) {
+          pinColor = '#64748B';
+          pinText = '✓';
+        }
+      } else {
+        if (c.isPromised) {
+          pinColor = '#9333EA';
+        } else if (c.isMonthly && c.isDueToday) {
+          pinColor = '#F59E0B';
+        } else if (c.remainingDue <= 0 || !c.isDueToday) {
+          pinColor = '#64748B';
+          pinText = '✓';
+        }
       }
 
       const customPin = L.divIcon({
@@ -1227,12 +1714,25 @@ function InteractiveLeafletMap({
         iconAnchor: [14, 14],
       });
 
-      const statusHtml =
-        c.remainingDue <= 0
-          ? '<div style="font-size: 11px; font-weight: 800; color: #059669; margin: 4px 0;">✅ పూర్తిగా చెల్లించారు (Paid in Full)</div>'
-          : !c.isDueToday
-          ? '<div style="font-size: 11px; font-weight: 800; color: #059669; margin: 4px 0;">✅ ఈ వారం వసూలైంది</div>'
-          : `<div style="font-size: 12px; font-weight: 800; color: #E11D48; margin: 4px 0;">బాకీ: ₹${c.dueAmount} (${c.dueBadgeText})</div>`;
+      let statusHtml = '';
+      if (isLineActive) {
+        if (c.isCollectedToday) {
+          statusHtml = `<div style="font-size: 11px; font-weight: 800; color: #059669; margin: 4px 0;">✅ ఈ రోజు వసూలైంది: ₹${c.todayPaidAmount} (${c.todayPaymentMode})</div>`;
+        } else if (c.isPromised) {
+          statusHtml = `<div style="font-size: 11px; font-weight: 800; color: #9333EA; margin: 4px 0;">⏱ తర్వాత ఇస్తామన్నారు (${c.followUp?.note || '2-3 గంటల్లో'})</div>`;
+        } else if (c.remainingDue <= 0) {
+          statusHtml = '<div style="font-size: 11px; font-weight: 800; color: #059669; margin: 4px 0;">✅ పూర్తయిన ఖాతా (బాకీ లేదు)</div>';
+        } else {
+          statusHtml = `<div style="font-size: 12px; font-weight: 800; color: #E11D48; margin: 4px 0;">బాకీ: ₹${c.dueAmount} (${c.dueBadgeText})</div>`;
+        }
+      } else {
+        statusHtml =
+          c.remainingDue <= 0
+            ? '<div style="font-size: 11px; font-weight: 800; color: #059669; margin: 4px 0;">✅ పూర్తిగా చెల్లించారు (Paid in Full)</div>'
+            : !c.isDueToday
+            ? '<div style="font-size: 11px; font-weight: 800; color: #059669; margin: 4px 0;">✅ ఈ వారం వసూలైంది</div>'
+            : `<div style="font-size: 12px; font-weight: 800; color: #E11D48; margin: 4px 0;">బాకీ: ₹${c.dueAmount} (${c.dueBadgeText})</div>`;
+      }
 
       const popupHtml = `
         <div style="font-family: system-ui, sans-serif; min-width: 175px; padding: 2px;">
@@ -1264,7 +1764,7 @@ function InteractiveLeafletMap({
         } catch (e) {}
       }
     }
-  }, [isLeafletReady, customers]);
+  }, [isLeafletReady, customers, isLineActive]);
 
   return (
     <div className="bg-white dark:bg-[#0D1527] rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm overflow-hidden p-2 space-y-2">
@@ -1290,7 +1790,7 @@ function InteractiveLeafletMap({
           </span>
           <span className="flex items-center space-x-1">
             <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
-            <span className="text-slate-600 dark:text-slate-300">పూర్తయింది</span>
+            <span className="text-slate-600 dark:text-slate-300">{isLineActive ? 'వసూలైంది' : 'పూర్తయింది'}</span>
           </span>
         </div>
       </div>

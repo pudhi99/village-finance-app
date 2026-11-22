@@ -11,6 +11,7 @@ export default function CollectionModal({
   customer,
   weekColumns = [],
   sheetTitle,
+  defaultColIndex = null,
   onSuccess,
 }) {
   const [selectedWeekColIdx, setSelectedWeekColIdx] = useState(null);
@@ -21,23 +22,27 @@ export default function CollectionModal({
 
   useEffect(() => {
     if (customer && weekColumns.length > 0) {
-      // Find applicable weeks for this customer based on join date
-      const applicableWeeks = weekColumns.filter((wk) => {
-        const payment = customer.weeklyPayments?.find((p) => p.colIndex === wk.colIndex);
-        return isWeekApplicableForCustomer(wk.header, customer.date, payment && payment.amount > 0);
-      });
+      if (defaultColIndex !== null && defaultColIndex !== undefined) {
+        setSelectedWeekColIdx(defaultColIndex);
+      } else {
+        // Find applicable weeks for this customer based on join date
+        const applicableWeeks = weekColumns.filter((wk) => {
+          const payment = customer.weeklyPayments?.find((p) => p.colIndex === wk.colIndex);
+          return isWeekApplicableForCustomer(wk.header, customer.date, payment && payment.amount > 0);
+        });
 
-      // Default week: first unpaid applicable week, or the latest week column
-      let defaultWeek = applicableWeeks.length > 0 ? applicableWeeks[0] : weekColumns[weekColumns.length - 1];
-      for (const wk of applicableWeeks) {
-        const payment = customer.weeklyPayments?.find((p) => p.colIndex === wk.colIndex);
-        if (!payment || payment.amount === 0) {
-          defaultWeek = wk;
-          break;
+        // Default week: first unpaid applicable week, or the latest week column
+        let defaultWeek = applicableWeeks.length > 0 ? applicableWeeks[0] : weekColumns[weekColumns.length - 1];
+        for (const wk of applicableWeeks) {
+          const payment = customer.weeklyPayments?.find((p) => p.colIndex === wk.colIndex);
+          if (!payment || payment.amount === 0) {
+            defaultWeek = wk;
+            break;
+          }
         }
-      }
 
-      setSelectedWeekColIdx(defaultWeek.colIndex);
+        setSelectedWeekColIdx(defaultWeek.colIndex);
+      }
 
       // Default amount from loan scheme installment
       const scheme = getSchemeByFaceValue(customer.amount);

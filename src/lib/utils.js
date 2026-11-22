@@ -84,6 +84,73 @@ export function getAllSaturdaysInMonth(year, month) {
 }
 
 /**
+ * Computes Saturday Date information and formatting
+ */
+export function getSaturdayDateInfo(referenceDate = new Date()) {
+  const d = new Date(referenceDate);
+  const dayOfWeek = d.getDay(); // 0 = Sun, 6 = Sat
+  const isSaturday = dayOfWeek === 6;
+
+  const sat = new Date(d);
+  if (!isSaturday) {
+    if (dayOfWeek === 0) {
+      // On Sunday, reference the Saturday just passed (yesterday)
+      sat.setDate(d.getDate() - 1);
+    } else {
+      // On Mon-Fri, reference upcoming Saturday
+      sat.setDate(d.getDate() + (6 - dayOfWeek));
+    }
+  }
+
+  const day = String(sat.getDate()).padStart(2, '0');
+  const month = String(sat.getMonth() + 1).padStart(2, '0');
+  const yearShort = String(sat.getFullYear()).slice(-2);
+  const dateFormatted = `${day}/${month}/${yearShort}`; // e.g. 21/11/26 or 28/11/26
+  const dateHyphen = `${day}-${month}-${yearShort}`;
+
+  return {
+    isSaturday,
+    satDate: sat,
+    dateFormatted,
+    dateHyphen,
+  };
+}
+
+/**
+ * Finds an existing week column matching the Saturday date or generates next week header
+ */
+export function resolveSaturdayWeekHeader(weekColumns = [], referenceDate = new Date()) {
+  const { dateFormatted, dateHyphen } = getSaturdayDateInfo(referenceDate);
+
+  // Check if any existing week column header contains today's Saturday date
+  const existing = (weekColumns || []).find((wk) => {
+    const h = String(wk.header || '');
+    return h.includes(dateFormatted) || h.includes(dateHyphen);
+  });
+
+  if (existing) {
+    return {
+      header: existing.header,
+      colIndex: existing.colIndex,
+      isNew: false,
+      dateFormatted,
+    };
+  }
+
+  // Count existing numbered weeks to determine next week number (e.g. 7 existing -> next is 8)
+  const numberedWeeks = (weekColumns || []).filter((wk) => /^\d+\s*\(/.test(String(wk.header || '')));
+  const nextNum = numberedWeeks.length + 1;
+  const nextHeader = `${nextNum} (${dateFormatted})`;
+
+  return {
+    header: nextHeader,
+    colIndex: null,
+    isNew: true,
+    dateFormatted,
+  };
+}
+
+/**
  * Calculates the exact N-th Saturday date of the target month based on join date.
  * (e.g., if a borrower took loan on the 3rd Saturday of October, Month 1 is due on
  * the 3rd Saturday of November, Month 2 on the 3rd Saturday of December, etc.)
