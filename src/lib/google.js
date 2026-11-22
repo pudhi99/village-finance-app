@@ -698,7 +698,23 @@ export async function getInvestmentsData() {
     }
   }
 
-  return { permanentInvestments, partnerSummary, safetyFundLog };
+  // Synthesize rich financial analytics
+  let pnlData = null;
+  try {
+    pnlData = await getPnLAndDashboardData();
+  } catch (e) {
+    console.warn('Could not fetch pnlData inside getInvestmentsData:', e.message);
+  }
+
+  return {
+    permanentInvestments,
+    partnerSummary,
+    safetyFundLog,
+    financialMetrics: pnlData?.financialMetrics || null,
+    partnerEquity: pnlData?.partnerEquity || [],
+    weeklyTrends: pnlData?.weeklyTrends || [],
+    kpis: pnlData?.kpis || null,
+  };
 }
 
 /**
@@ -789,50 +805,93 @@ export async function getPnLAndDashboardData() {
   const totalDues = edurlankaDues + kothapalliDues;
   const bagBalance = ledger.summary.closingBagBalance || 5500;
 
-  // Expected gross profit calculation from loan schemes:
-  // Each customer face value minus disbursed gives expected gross profit
+  // Expected gross profit & principal disbursement calculation from loan schemes:
+  let totalDisbursedPrincipal = 0;
   let expectedGrossProfit = 0;
+
   [...activeEdurlanka, ...activeKothapalli].forEach(c => {
-    // Typical profit is Face Value - Disbursed. e.g.:
-    // 25k -> 19.8k (5.2k profit)
-    // 12.5k -> 9.9k (2.6k profit)
-    // 6.3k -> 5.0k (1.3k profit)
-    // 18.75k -> 14.85k (3.9k profit)
-    // Roughly ~20.8% of Face Value
-    if (c.amount === 25000) expectedGrossProfit += (25000 - 19800);
-    else if (c.amount === 18750) expectedGrossProfit += (18750 - 14850);
-    else if (c.amount === 14000) expectedGrossProfit += (14000 - 9900);
-    else if (c.amount === 12500) expectedGrossProfit += (12500 - 9900);
-    else if (c.amount === 6300) expectedGrossProfit += (6300 - 5000);
-    else if (c.amount === 5000) expectedGrossProfit += (5000 - 4000);
-    else if (c.amount === 2500) expectedGrossProfit += (2500 - 2000);
-    else if (c.amount === 1250) expectedGrossProfit += (1250 - 1000);
-    else expectedGrossProfit += Math.round(c.amount * 0.208);
+    let disbursed = 0;
+    if (c.amount === 25000) disbursed = 19800;
+    else if (c.amount === 18750) disbursed = 14850;
+    else if (c.amount === 14000) disbursed = 9900;
+    else if (c.amount === 12500) disbursed = 9900;
+    else if (c.amount === 6300) disbursed = 5000;
+    else if (c.amount === 5000) disbursed = 4000;
+    else if (c.amount === 2500) disbursed = 2000;
+    else if (c.amount === 1250) disbursed = 1000;
+    else disbursed = Math.round(c.amount * 0.792);
+
+    totalDisbursedPrincipal += disbursed;
+    expectedGrossProfit += (c.amount - disbursed);
   });
 
-  // Partner equity
+  const profitMarginPct = totalPortfolio > 0 ? Number(((expectedGrossProfit / totalPortfolio) * 100).toFixed(1)) : 20.8;
+  const principalRatio = totalPortfolio > 0 ? (totalDisbursedPrincipal / totalPortfolio) : 0.792;
+  const profitRatio = totalPortfolio > 0 ? (expectedGrossProfit / totalPortfolio) : 0.208;
+
+  // Realized amounts (Already collected so far)
+  const realizedPrincipal = Math.round(totalCollected * principalRatio);
+  const realizedProfit = Math.round(totalCollected * profitRatio);
+
+  // Pending amounts (To be collected from market)
+  const pendingPrincipal = Math.round(totalDues * principalRatio);
+  const pendingProfit = Math.round(totalDues * profitRatio);
+
+  // Partner equity & profit distribution
   const sattibabuInvested = 400000;
   const prudhviInvested = 250000;
   const totalCapital = sattibabuInvested + prudhviInvested;
   const sattibabuSharePct = (sattibabuInvested / totalCapital) * 100;
   const prudhviSharePct = (prudhviInvested / totalCapital) * 100;
 
+  const sattibabuRealizedProfit = Math.round(realizedProfit * (sattibabuSharePct / 100));
+  const prudhviRealizedProfit = Math.round(realizedProfit * (prudhviSharePct / 100));
+  const sattibabuExpectedProfit = Math.round(expectedGrossProfit * (sattibabuSharePct / 100));
+  const prudhviExpectedProfit = Math.round(expectedGrossProfit * (prudhviSharePct / 100));
+
   const partnerEquity = [
     {
       name: 'సత్తిబాబు (Sattibabu)',
       invested: sattibabuInvested,
       sharePct: sattibabuSharePct.toFixed(2) + '%',
-      expectedProfitShare: Math.round(expectedGrossProfit * (sattibabuSharePct / 100)),
-      totalValue: sattibabuInvested + Math.round(expectedGrossProfit * (sattibabuSharePct / 100)),
+      shareRatio: sattibabuSharePct / 100,
+      realizedProfitShare: sattibabuRealizedProfit,
+      expectedProfitShare: sattibabuExpectedProfit,
+      totalRealizedValue: sattibabuInvested + sattibabuRealizedProfit,
+      totalValue: sattibabuInvested + sattibabuExpectedProfit,
     },
     {
       name: 'పృధ్వి (Prudhvi)',
       invested: prudhviInvested,
       sharePct: prudhviSharePct.toFixed(2) + '%',
-      expectedProfitShare: Math.round(expectedGrossProfit * (prudhviSharePct / 100)),
-      totalValue: prudhviInvested + Math.round(expectedGrossProfit * (prudhviSharePct / 100)),
+      shareRatio: prudhviSharePct / 100,
+      realizedProfitShare: prudhviRealizedProfit,
+      expectedProfitShare: prudhviExpectedProfit,
+      totalRealizedValue: prudhviInvested + prudhviRealizedProfit,
+      totalValue: prudhviInvested + prudhviExpectedProfit,
     },
   ];
+
+  const financialMetrics = {
+    totalCapital,
+    sattibabuInvested,
+    prudhviInvested,
+    totalPortfolio,
+    totalDisbursedPrincipal,
+    expectedGrossProfit,
+    profitMarginPct,
+    totalCollected,
+    realizedPrincipal,
+    realizedProfit,
+    totalDues,
+    pendingPrincipal,
+    pendingProfit,
+    bagBalance,
+    deployedPercentage: totalCapital > 0 ? Math.round((totalDisbursedPrincipal / totalCapital) * 100) : 0,
+    recoveryPercentage: totalPortfolio > 0 ? Number(((totalCollected / totalPortfolio) * 100).toFixed(1)) : 0,
+    unallocatedCapital: Math.max(0, totalCapital - totalDisbursedPrincipal),
+    totalRotationVolume: totalPortfolio + totalCollected,
+  };
 
   // Weekly collection trends across both villages
   const weekCollectionsMap = {};
@@ -881,9 +940,17 @@ export async function getPnLAndDashboardData() {
       totalDues,
       totalCollected,
       totalPortfolio,
+      totalDisbursedPrincipal,
       expectedGrossProfit,
+      profitMarginPct,
+      realizedPrincipal,
+      realizedProfit,
+      pendingPrincipal,
+      pendingProfit,
+      totalCapital,
       activeBorrowersCount: activeEdurlanka.length + activeKothapalli.length,
     },
+    financialMetrics,
     villages: {
       edurlanka: {
         title: 'ఎదుర్లంక (Edurlanka)',

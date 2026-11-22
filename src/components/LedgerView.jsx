@@ -70,6 +70,50 @@ export default function LedgerView({ ledgerData, onOpenAddLedger }) {
             </span>
           </div>
         </div>
+
+        {/* Inflow vs Outflow Visual Bar */}
+        {(summary.totalCollections > 0 || summary.totalCapitalAdded > 0) && (
+          <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/[0.06] space-y-1.5 text-xs">
+            <div className="flex flex-wrap justify-between gap-1 font-bold text-slate-600 dark:text-slate-400">
+              <span className="flex items-center space-x-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
+                <span>మొత్తం ఇన్ఫ్లో: {formatINR(summary.totalCapitalAdded + summary.totalCollections + summary.safetyFundInflow)}</span>
+              </span>
+              <span className="flex items-center space-x-1">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0" />
+                <span>ఖర్చులు/అవుట్ఫ్లో: {formatINR(summary.totalExpensesAndReturns)}</span>
+              </span>
+            </div>
+            <div className="w-full h-2.5 bg-slate-100 dark:bg-[#131C30] rounded-full overflow-hidden flex border border-slate-200 dark:border-white/[0.06]">
+              <div
+                style={{
+                  width: `${Math.min(
+                    100,
+                    Math.round(
+                      ((summary.totalCapitalAdded + summary.totalCollections) /
+                        ((summary.totalCapitalAdded + summary.totalCollections + summary.totalExpensesAndReturns) || 1)) *
+                        100
+                    )
+                  )}%`,
+                }}
+                className="bg-emerald-500 h-full rounded-l-full"
+              />
+              <div
+                style={{
+                  width: `${Math.min(
+                    100,
+                    Math.round(
+                      (summary.totalExpensesAndReturns /
+                        ((summary.totalCapitalAdded + summary.totalCollections + summary.totalExpensesAndReturns) || 1)) *
+                        100
+                    )
+                  )}%`,
+                }}
+                className="bg-rose-500 h-full rounded-r-full"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Transactions List */}
