@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import DashboardView from '@/components/DashboardView';
@@ -18,6 +18,8 @@ import PhotoViewerModal from '@/components/PhotoViewerModal';
 import SettingsModal from '@/components/SettingsModal';
 import { Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
+const VALID_TABS = ['dashboard', 'line', 'edurlanka', 'kothapalli', 'ledger', 'investments'];
+
 export default function Home() {
   const [theme, setTheme] = useState('light');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -32,6 +34,11 @@ export default function Home() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [toastMessage, setToastMessage] = useState('');
+
+  // Mobile Back Navigation & History Refs
+  const isAnyModalOpenRef = useRef(() => false);
+  const modalHistoryDepthRef = useRef(0);
+  const ignoreNextPopRef = useRef(false);
 
   // Modals state
   const [collectionModalState, setCollectionModalState] = useState({
@@ -66,6 +73,150 @@ export default function Home() {
     title: '',
     photoUrl: '',
   });
+
+  // Track if any modal is currently open
+  const isAnyModalOpen = useCallback(() => {
+    return (
+      collectionModalState.isOpen ||
+      addCustomerModalState.isOpen ||
+      editCustomerModalState.isOpen ||
+      addWeekModalState.isOpen ||
+      isAddLedgerOpen ||
+      isAddInvestmentOpen ||
+      photoViewerState.isOpen ||
+      isSettingsOpen
+    );
+  }, [
+    collectionModalState.isOpen,
+    addCustomerModalState.isOpen,
+    editCustomerModalState.isOpen,
+    addWeekModalState.isOpen,
+    isAddLedgerOpen,
+    isAddInvestmentOpen,
+    photoViewerState.isOpen,
+    isSettingsOpen,
+  ]);
+
+  useEffect(() => {
+    isAnyModalOpenRef.current = isAnyModalOpen;
+  }, [isAnyModalOpen]);
+
+  // Close all open modals helper
+  const closeAllModals = useCallback(() => {
+    setCollectionModalState((prev) => ({ ...prev, isOpen: false }));
+    setAddCustomerModalState((prev) => ({ ...prev, isOpen: false }));
+    setEditCustomerModalState((prev) => ({ ...prev, isOpen: false }));
+    setAddWeekModalState((prev) => ({ ...prev, isOpen: false }));
+    setIsAddLedgerOpen(false);
+    setIsAddInvestmentOpen(false);
+    setPhotoViewerState((prev) => ({ ...prev, isOpen: false }));
+    setIsSettingsOpen(false);
+  }, []);
+
+  // Modal history helpers for back-gesture closing
+  const pushModalHistory = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      modalHistoryDepthRef.current += 1;
+      window.history.pushState({ modal: true, tab: activeTab }, '');
+    }
+  }, [activeTab]);
+
+  const closeModalWithHistory = useCallback((closeFn) => {
+    if (closeFn) closeFn();
+    if (typeof window !== 'undefined' && modalHistoryDepthRef.current > 0) {
+      modalHistoryDepthRef.current -= 1;
+      ignoreNextPopRef.current = true;
+      window.history.back();
+    }
+  }, []);
+
+  // Tab change with browser history update and localStorage persistence
+  const handleTabChange = useCallback((newTab) => {
+    if (!VALID_TABS.includes(newTab)) return;
+    if (newTab === activeTab) return;
+
+    if (isAnyModalOpenRef.current()) {
+      closeAllModals();
+    }
+
+    try {
+      localStorage.setItem('last_active_tab', newTab);
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      const targetUrl = newTab === 'dashboard' ? window.location.pathname : `${window.location.pathname}?tab=${newTab}`;
+      window.history.pushState({ tab: newTab }, '', targetUrl);
+    }
+
+    setActiveTab(newTab);
+  }, [activeTab, closeAllModals]);
+
+  // Sync initial tab from URL or localStorage and set up base history
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const tabFromUrl = urlParams.get('tab');
+
+    let savedTab = null;
+    try {
+      savedTab = localStorage.getItem('last_active_tab');
+    } catch (e) {}
+
+    let initialTab = 'dashboard';
+    if (tabFromUrl && VALID_TABS.includes(tabFromUrl)) {
+      initialTab = tabFromUrl;
+    } else if (savedTab && VALID_TABS.includes(savedTab)) {
+      initialTab = savedTab;
+    }
+
+    setActiveTab(initialTab);
+
+    // If initialTab is not dashboard, seed 'dashboard' first, then push initialTab
+    // so pressing back gesture on initialTab goes back to dashboard instead of closing app!
+    if (initialTab !== 'dashboard') {
+      window.history.replaceState({ tab: 'dashboard' }, '', window.location.pathname);
+      window.history.pushState({ tab: initialTab }, '', `${window.location.pathname}?tab=${initialTab}`);
+    } else {
+      window.history.replaceState({ tab: 'dashboard' }, '', window.location.pathname);
+    }
+  }, []);
+
+  // Listen for browser / mobile back gesture (popstate)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const handlePopState = (event) => {
+      // If programmatic back from modal close button, ignore this pop event
+      if (ignoreNextPopRef.current) {
+        ignoreNextPopRef.current = false;
+        return;
+      }
+
+      // 1. If any modal is currently open, close the modal and stop
+      if (modalHistoryDepthRef.current > 0 || isAnyModalOpenRef.current()) {
+        modalHistoryDepthRef.current = Math.max(0, modalHistoryDepthRef.current - 1);
+        closeAllModals();
+        return;
+      }
+
+      // 2. Otherwise, handle tab navigation back
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetTab = event.state?.tab || urlParams.get('tab') || 'dashboard';
+
+      if (VALID_TABS.includes(targetTab)) {
+        setActiveTab(targetTab);
+        try {
+          localStorage.setItem('last_active_tab', targetTab);
+        } catch (e) {}
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [closeAllModals]);
 
   // Initialize theme from localStorage
   useEffect(() => {
@@ -144,8 +295,9 @@ export default function Home() {
     loadAllData();
   }, [loadAllData]);
 
-  // Modal handlers
+  // Modal handlers with mobile back gesture history support
   const handleOpenCollection = (customer, sheetTitle, defaultColIndex = null) => {
+    pushModalHistory();
     setCollectionModalState({
       isOpen: true,
       customer,
@@ -155,6 +307,7 @@ export default function Home() {
   };
 
   const handleOpenEditCustomer = (customer, sheetTitle) => {
+    pushModalHistory();
     setEditCustomerModalState({
       isOpen: true,
       customer,
@@ -163,6 +316,7 @@ export default function Home() {
   };
 
   const handleOpenAddCustomer = (villageTitle) => {
+    pushModalHistory();
     const targetVillage = villageTitle || (activeTab === 'kothapalli' ? 'కొత్తపల్లి (Kothapalli)' : 'ఎదుర్లంక (Edurlanka)');
     const vData = targetVillage.includes('కొత్తపల్లి') ? kothapalliData : edurlankaData;
     let maxSNo = 0;
@@ -181,6 +335,7 @@ export default function Home() {
   };
 
   const handleOpenAddWeek = (sheetTitle, count) => {
+    pushModalHistory();
     setAddWeekModalState({
       isOpen: true,
       sheetTitle,
@@ -189,11 +344,27 @@ export default function Home() {
   };
 
   const handleViewPhoto = (photoUrl, title) => {
+    pushModalHistory();
     setPhotoViewerState({
       isOpen: true,
       title,
       photoUrl,
     });
+  };
+
+  const handleOpenAddLedger = () => {
+    pushModalHistory();
+    setIsAddLedgerOpen(true);
+  };
+
+  const handleOpenAddInvestment = () => {
+    pushModalHistory();
+    setIsAddInvestmentOpen(true);
+  };
+
+  const handleOpenSettings = () => {
+    pushModalHistory();
+    setIsSettingsOpen(true);
   };
 
   // Optimistic collection update
@@ -249,10 +420,10 @@ export default function Home() {
         onRefresh={() => loadAllData(true)}
         isRefreshing={isRefreshing}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={handleTabChange}
         currentTheme={theme}
         onToggleTheme={handleToggleTheme}
-        onOpenSettings={() => setIsSettingsOpen(true)}
+        onOpenSettings={handleOpenSettings}
       />
 
       {/* Main Content Area */}
@@ -285,7 +456,7 @@ export default function Home() {
             {activeTab === 'dashboard' && (
               <DashboardView
                 data={dashboardData}
-                onNavigate={setActiveTab}
+                onNavigate={handleTabChange}
                 onOpenAddCustomer={handleOpenAddCustomer}
               />
             )}
@@ -325,14 +496,14 @@ export default function Home() {
             {activeTab === 'ledger' && (
               <LedgerView
                 ledgerData={ledgerData}
-                onOpenAddLedger={() => setIsAddLedgerOpen(true)}
+                onOpenAddLedger={handleOpenAddLedger}
               />
             )}
 
             {activeTab === 'investments' && (
               <InvestmentsView
                 investmentsData={investmentsData}
-                onOpenAddInvestment={() => setIsAddInvestmentOpen(true)}
+                onOpenAddInvestment={handleOpenAddInvestment}
               />
             )}
           </>
@@ -340,12 +511,16 @@ export default function Home() {
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
+      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Modals */}
       <CollectionModal
         isOpen={collectionModalState.isOpen}
-        onClose={() => setCollectionModalState({ isOpen: false, customer: null, sheetTitle: '', defaultColIndex: null })}
+        onClose={() =>
+          closeModalWithHistory(() =>
+            setCollectionModalState({ isOpen: false, customer: null, sheetTitle: '', defaultColIndex: null })
+          )
+        }
         customer={collectionModalState.customer}
         sheetTitle={collectionModalState.sheetTitle}
         defaultColIndex={collectionModalState.defaultColIndex}
@@ -359,7 +534,11 @@ export default function Home() {
 
       <AddCustomerModal
         isOpen={addCustomerModalState.isOpen}
-        onClose={() => setAddCustomerModalState({ isOpen: false, currentVillage: '', existingMaxSNo: 0 })}
+        onClose={() =>
+          closeModalWithHistory(() =>
+            setAddCustomerModalState({ isOpen: false, currentVillage: '', existingMaxSNo: 0 })
+          )
+        }
         currentVillage={addCustomerModalState.currentVillage}
         existingMaxSNo={addCustomerModalState.existingMaxSNo}
         onSuccess={handleCustomerAddedSuccess}
@@ -367,7 +546,11 @@ export default function Home() {
 
       <EditCustomerModal
         isOpen={editCustomerModalState.isOpen}
-        onClose={() => setEditCustomerModalState({ isOpen: false, customer: null, sheetTitle: '' })}
+        onClose={() =>
+          closeModalWithHistory(() =>
+            setEditCustomerModalState({ isOpen: false, customer: null, sheetTitle: '' })
+          )
+        }
         customer={editCustomerModalState.customer}
         sheetTitle={editCustomerModalState.sheetTitle}
         onSuccess={handleCustomerUpdatedSuccess}
@@ -375,7 +558,11 @@ export default function Home() {
 
       <AddWeekModal
         isOpen={addWeekModalState.isOpen}
-        onClose={() => setAddWeekModalState({ isOpen: false, sheetTitle: '', currentWeekCount: 6 })}
+        onClose={() =>
+          closeModalWithHistory(() =>
+            setAddWeekModalState({ isOpen: false, sheetTitle: '', currentWeekCount: 6 })
+          )
+        }
         sheetTitle={addWeekModalState.sheetTitle}
         currentWeekCount={addWeekModalState.currentWeekCount}
         onSuccess={handleWeekAddedSuccess}
@@ -383,26 +570,30 @@ export default function Home() {
 
       <AddLedgerModal
         isOpen={isAddLedgerOpen}
-        onClose={() => setIsAddLedgerOpen(false)}
+        onClose={() => closeModalWithHistory(() => setIsAddLedgerOpen(false))}
         onSuccess={handleLedgerSuccess}
       />
 
       <AddInvestmentModal
         isOpen={isAddInvestmentOpen}
-        onClose={() => setIsAddInvestmentOpen(false)}
+        onClose={() => closeModalWithHistory(() => setIsAddInvestmentOpen(false))}
         onSuccess={handleInvestmentSuccess}
       />
 
       <PhotoViewerModal
         isOpen={photoViewerState.isOpen}
-        onClose={() => setPhotoViewerState({ isOpen: false, title: '', photoUrl: '' })}
+        onClose={() =>
+          closeModalWithHistory(() =>
+            setPhotoViewerState({ isOpen: false, title: '', photoUrl: '' })
+          )
+        }
         title={photoViewerState.title}
         photoUrl={photoViewerState.photoUrl}
       />
 
       <SettingsModal
         isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
+        onClose={() => closeModalWithHistory(() => setIsSettingsOpen(false))}
         currentTheme={theme}
         onThemeChange={handleThemeChange}
       />
