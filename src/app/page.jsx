@@ -232,7 +232,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100/70 dark:bg-[#0B0F19] text-slate-900 dark:text-slate-100 font-sans transition-colors">
+    <div className="min-h-screen flex flex-col bg-slate-100/70 dark:bg-[#060911] text-slate-900 dark:text-slate-100 font-sans transition-colors selection:bg-teal-500 selection:text-white">
       {/* Toast Alert */}
       {toastMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-emerald-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 text-xs font-bold border border-emerald-700 animate-fadeIn">

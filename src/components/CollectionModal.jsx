@@ -102,26 +102,26 @@ export default function CollectionModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-h-[90vh] flex flex-col transition-colors">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+      <div className="bg-white dark:bg-[#0D1527] w-full max-w-md rounded-t-2xl sm:rounded-2xl shadow-2xl border border-slate-200 dark:border-white/[0.08] overflow-hidden max-h-[90vh] flex flex-col transition-colors">
         {/* Modal Header */}
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/70 dark:bg-slate-950/50">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-white/[0.06] flex items-center justify-between bg-slate-50/70 dark:bg-[#0A0F1D]/80">
           <div>
             <div className="flex items-center space-x-2">
-              <span className="w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-900/60 text-teal-800 dark:text-teal-300 text-xs font-bold flex items-center justify-center">
+              <span className="w-6 h-6 rounded-full bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300 text-xs font-black flex items-center justify-center border border-teal-200 dark:border-teal-500/30">
                 #{customer.sNo}
               </span>
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">
+              <h3 className="font-black text-slate-900 dark:text-white text-base">
                 {customer.isMonthly ? 'నెల వాయిదా నమోదు (Monthly Collection)' : 'వసూలు నమోదు (Record Collection)'}
               </h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {customer.nameTe} <span className="opacity-75">({customer.nameEn})</span>
+              {customer.nameTe} <span className="opacity-75 font-semibold">({customer.nameEn})</span>
             </p>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 flex items-center justify-center transition-colors"
+            className="w-8 h-8 rounded-full bg-slate-200/80 dark:bg-[#131C30] text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-[#1A2642] flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -130,8 +130,8 @@ export default function CollectionModal({
         {/* Modal Body */}
         <div className="p-5 space-y-4 overflow-y-auto">
           {/* Customer Quick Stats Card */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400 pb-1.5 border-b border-slate-200/60 dark:border-slate-700/60">
+          <div className="p-3 bg-slate-50 dark:bg-[#131C30]/80 rounded-xl border border-slate-200 dark:border-white/[0.06] space-y-2">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-400 pb-1.5 border-b border-slate-200/60 dark:border-white/[0.06]">
               <span>చేరిన తేదీ: <strong className="text-teal-700 dark:text-teal-300 font-bold">{customer.date}</strong></span>
               {customer.isMonthly ? (
                 (() => {
@@ -149,16 +149,16 @@ export default function CollectionModal({
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block">మొత్తం స్కీమ్</span>
-                <span className="text-xs font-bold text-slate-800 dark:text-white">{formatINR(customer.amount)}</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">మొత్తం స్కీమ్</span>
+                <span className="text-xs font-black text-slate-800 dark:text-white">{formatINR(customer.amount)}</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block">వసూలైనది</span>
-                <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{formatINR(customer.totalPaid)}</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">వసూలైనది</span>
+                <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">{formatINR(customer.totalPaid)}</span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400 block">మిగిలిన బాకీ</span>
-                <span className="text-xs font-bold text-rose-600 dark:text-rose-400">{formatINR(customer.remainingDue)}</span>
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">మిగిలిన బాకీ</span>
+                <span className="text-xs font-black text-rose-600 dark:text-rose-400">{formatINR(customer.remainingDue)}</span>
               </div>
             </div>
           </div>
@@ -170,7 +170,7 @@ export default function CollectionModal({
                 {customer.isMonthly ? 'ఏ తేదీ/వారం కాలమ్‌లో నమోదు చేయాలి?' : 'వారం ఎంచుకోండి (Select Week Column):'}
               </label>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-40 overflow-y-auto p-1 bg-slate-100 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-40 overflow-y-auto p-1 bg-slate-100 dark:bg-[#0A0F1D]/60 rounded-xl border border-slate-200 dark:border-white/[0.06]">
               {weekColumns.map((wk) => {
                 const isSelected = selectedWeekColIdx === wk.colIndex;
                 const paidItem = customer.weeklyPayments?.find((p) => p.colIndex === wk.colIndex);
@@ -190,12 +190,12 @@ export default function CollectionModal({
                     }}
                     className={`p-2 rounded-xl text-left text-xs transition-all relative border ${
                       isSelected
-                        ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
+                        ? 'bg-teal-700 dark:bg-emerald-600 text-white border-teal-700 dark:border-emerald-500 shadow-sm'
                         : isPaid
-                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100'
+                        ? 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-950 dark:text-emerald-200 border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100'
                         : isApplicable
-                        ? 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
-                        : 'bg-slate-50/70 dark:bg-slate-900/60 text-slate-400 dark:text-slate-500 border-slate-200/60 dark:border-slate-800 opacity-60 hover:opacity-100'
+                        ? 'bg-white dark:bg-[#131C30] text-slate-700 dark:text-slate-200 border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-[#1A2642]'
+                        : 'bg-slate-50/70 dark:bg-[#0A0F1D]/40 text-slate-400 dark:text-slate-500 border-slate-200/60 dark:border-white/[0.04] opacity-60 hover:opacity-100'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -226,8 +226,8 @@ export default function CollectionModal({
                 onClick={() => setPaymentMode('Cash')}
                 className={`flex items-center justify-center space-x-2 py-2.5 px-3 rounded-xl border font-bold text-xs transition-all ${
                   paymentMode === 'Cash'
-                    ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    ? 'bg-emerald-600 dark:bg-emerald-500 text-white dark:text-slate-950 border-emerald-600 dark:border-emerald-400 shadow-md shadow-emerald-500/20'
+                    : 'bg-white dark:bg-[#131C30] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-[#1A2642]'
                 }`}
               >
                 <Banknote className="w-4 h-4" />
@@ -238,8 +238,8 @@ export default function CollectionModal({
                 onClick={() => setPaymentMode('UPI')}
                 className={`flex items-center justify-center space-x-2 py-2.5 px-3 rounded-xl border font-bold text-xs transition-all ${
                   paymentMode === 'UPI'
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    ? 'bg-blue-600 dark:bg-blue-500 text-white border-blue-600 dark:border-blue-400 shadow-md shadow-blue-500/20'
+                    : 'bg-white dark:bg-[#131C30] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-[#1A2642]'
                 }`}
               >
                 <CreditCard className="w-4 h-4" />
@@ -262,7 +262,7 @@ export default function CollectionModal({
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder="500"
-                className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-lg text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent"
+                className="w-full pl-8 pr-3 py-2.5 rounded-xl border border-slate-300 dark:border-white/[0.08] font-black text-lg text-slate-900 dark:text-white bg-white dark:bg-[#131C30] focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 shadow-sm"
               />
             </div>
 
@@ -273,7 +273,7 @@ export default function CollectionModal({
                   key={chipVal}
                   type="button"
                   onClick={() => setAmount(String(chipVal))}
-                  className="px-2.5 py-1 text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-700 active:scale-95 transition-transform"
+                  className="px-2.5 py-1 text-xs font-bold bg-slate-100 dark:bg-[#131C30] hover:bg-slate-200 dark:hover:bg-[#1A2642] text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-white/[0.08] active:scale-95 transition-transform"
                 >
                   ₹{chipVal}
                 </button>
@@ -282,7 +282,7 @@ export default function CollectionModal({
                 <button
                   type="button"
                   onClick={() => setAmount(String(customer.remainingDue))}
-                  className="px-2.5 py-1 text-xs font-bold bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-200 rounded-lg border border-amber-200 dark:border-amber-800/60 active:scale-95 transition-transform"
+                  className="px-2.5 py-1 text-xs font-black bg-amber-50 dark:bg-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/30 text-amber-900 dark:text-amber-200 rounded-lg border border-amber-300 dark:border-amber-500/40 active:scale-95 transition-transform shadow-sm"
                 >
                   మిగిలిన మొత్తం (₹{customer.remainingDue})
                 </button>

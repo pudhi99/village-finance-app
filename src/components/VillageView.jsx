@@ -129,17 +129,17 @@ export default function VillageView({
   return (
     <div className="space-y-4 pb-24 pt-1 animate-fadeIn">
       {/* Top Village Header & Summary Card */}
-      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-sm p-4 sm:p-5 transition-colors">
+      <div className="bg-white dark:bg-[#0D1527] rounded-2xl border border-slate-200/90 dark:border-white/[0.08] shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] p-4 sm:p-5 transition-colors">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
           <div>
             <div className="flex items-center space-x-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-teal-600 dark:bg-teal-400 animate-pulse" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] animate-pulse" />
               <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
                 {sheetTitle}
               </h2>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              యాక్టివ్ ఖాతాలు: <strong className="text-teal-700 dark:text-teal-300">{stats.count}</strong>
+              యాక్టివ్ ఖాతాలు: <strong className="text-emerald-700 dark:text-emerald-300 font-black">{stats.count}</strong>
               {stats.inactiveCount > 0 && (
                 <span className="opacity-75 ml-1.5">(ముగిసినవి: {stats.inactiveCount})</span>
               )}
@@ -150,14 +150,14 @@ export default function VillageView({
           <div className="flex items-center space-x-2">
             <button
               onClick={() => onOpenAddWeek(sheetTitle, weekColumns.length)}
-              className="px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl border border-slate-200 dark:border-slate-700 active:scale-95 transition-all flex items-center space-x-1"
+              className="px-3 py-2 bg-slate-100 dark:bg-[#131C30] hover:bg-slate-200 dark:hover:bg-[#1A2642] text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl border border-slate-200 dark:border-white/[0.08] active:scale-95 transition-all flex items-center space-x-1 shadow-sm"
             >
               <CalendarPlus className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
               <span>+ వారం (Add Week)</span>
             </button>
             <button
               onClick={() => onOpenAddCustomer(sheetTitle)}
-              className="px-3.5 py-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs rounded-xl shadow-sm active:scale-95 transition-all flex items-center space-x-1"
+              className="px-3.5 py-2 bg-gradient-to-r from-teal-700 to-emerald-600 hover:from-teal-600 hover:to-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-950/30 active:scale-95 transition-all flex items-center space-x-1"
             >
               <Plus className="w-4 h-4" />
               <span>+ కొత్త ఖాతా (Add Customer)</span>
@@ -166,28 +166,28 @@ export default function VillageView({
         </div>
 
         {/* 4 Stats Chips */}
-        <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100 dark:border-slate-800/80 text-center">
-          <div className="p-2 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-100 dark:border-slate-700/60">
+        <div className="grid grid-cols-4 gap-2 pt-3 border-t border-slate-100 dark:border-white/[0.08] text-center">
+          <div className="p-2 bg-slate-50 dark:bg-[#131C30] rounded-xl border border-slate-100 dark:border-white/[0.06]">
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block">మొత్తం లోన్స్</span>
-            <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{formatINR(stats.portfolio)}</span>
+            <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">{formatINR(stats.portfolio)}</span>
           </div>
-          <div className="p-2 bg-emerald-50/60 dark:bg-emerald-950/40 rounded-xl border border-emerald-100 dark:border-emerald-800/50">
-            <span className="text-[10px] text-emerald-700 dark:text-emerald-300 font-semibold block">వసూలైనది</span>
-            <span className="text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-200">{formatINR(stats.collected)}</span>
+          <div className="p-2 bg-emerald-50/60 dark:bg-emerald-500/10 rounded-xl border border-emerald-100 dark:border-emerald-500/25">
+            <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold block">వసూలైనది</span>
+            <span className="text-xs sm:text-sm font-black text-emerald-800 dark:text-emerald-300">{formatINR(stats.collected)}</span>
           </div>
-          <div className="p-2 bg-rose-50/60 dark:bg-rose-950/40 rounded-xl border border-rose-100 dark:border-rose-800/50">
-            <span className="text-[10px] text-rose-700 dark:text-rose-300 font-semibold block">మార్కెట్ బాకీ</span>
-            <span className="text-xs sm:text-sm font-bold text-rose-700 dark:text-rose-300">{formatINR(stats.dues)}</span>
+          <div className="p-2 bg-rose-50/60 dark:bg-rose-500/10 rounded-xl border border-rose-100 dark:border-rose-500/25">
+            <span className="text-[10px] text-rose-700 dark:text-rose-400 font-semibold block">మార్కెట్ బాకీ</span>
+            <span className="text-xs sm:text-sm font-black text-rose-700 dark:text-rose-400">{formatINR(stats.dues)}</span>
           </div>
-          <div className="p-2 bg-teal-50/60 dark:bg-teal-950/40 rounded-xl border border-teal-100 dark:border-teal-800/50">
-            <span className="text-[10px] text-teal-700 dark:text-teal-300 font-semibold block">రికవరీ శాతం</span>
-            <span className="text-xs sm:text-sm font-bold text-teal-800 dark:text-teal-200">{stats.rate}%</span>
+          <div className="p-2 bg-teal-50/60 dark:bg-teal-500/10 rounded-xl border border-teal-100 dark:border-teal-500/25">
+            <span className="text-[10px] text-teal-700 dark:text-teal-400 font-semibold block">రికవరీ శాతం</span>
+            <span className="text-xs sm:text-sm font-black text-teal-800 dark:text-teal-300">{stats.rate}%</span>
           </div>
         </div>
       </div>
 
       {/* Search & Quick Filter Bar */}
-      <div className="space-y-2 sticky top-[57px] z-30 bg-slate-100/95 dark:bg-[#0B0F19]/95 backdrop-blur-md py-2 -mx-2 px-2 transition-colors">
+      <div className="space-y-2 sticky top-[57px] z-30 bg-slate-100/95 dark:bg-[#060911]/90 backdrop-blur-xl py-2 -mx-2 px-2 transition-colors">
         {/* Search Input */}
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -196,7 +196,7 @@ export default function VillageView({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="పేరు, వ.సం., ఫోన్, లేదా ష్యూరిటీ నంబర్ వెతకండి..."
-            className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs sm:text-sm font-medium bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent shadow-sm placeholder:text-slate-400"
+            className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-300 dark:border-white/[0.08] text-xs sm:text-sm font-medium bg-white dark:bg-[#0D1527] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 shadow-sm placeholder:text-slate-400"
           />
           {searchQuery && (
             <button
@@ -214,8 +214,8 @@ export default function VillageView({
             onClick={() => setFilterType('all')}
             className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
               filterType === 'all'
-                ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                ? 'bg-teal-700 dark:bg-emerald-500/25 text-white dark:text-emerald-200 border-teal-700 dark:border-emerald-500/40 shadow-sm'
+                : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-[#131C30]'
             }`}
           >
             యాక్టివ్ ఖాతాలు ({stats.count})
@@ -224,8 +224,8 @@ export default function VillageView({
             onClick={() => setFilterType('weekly')}
             className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
               filterType === 'weekly'
-                ? 'bg-teal-700 text-white border-teal-700 shadow-sm'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                ? 'bg-teal-700 dark:bg-emerald-500/25 text-white dark:text-emerald-200 border-teal-700 dark:border-emerald-500/40 shadow-sm'
+                : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-[#131C30]'
             }`}
           >
             వారం స్కీమ్
@@ -234,8 +234,8 @@ export default function VillageView({
             onClick={() => setFilterType('monthly')}
             className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
               filterType === 'monthly'
-                ? 'bg-purple-700 text-white border-purple-700 shadow-sm'
-                : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                ? 'bg-purple-700 dark:bg-purple-500/25 text-white dark:text-purple-200 border-purple-700 dark:border-purple-500/40 shadow-sm'
+                : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08] hover:bg-slate-50 dark:hover:bg-[#131C30]'
             }`}
           >
             నెల స్కీమ్
@@ -245,8 +245,8 @@ export default function VillageView({
               onClick={() => setFilterType(filterType === 'monthly_due' ? 'all' : 'monthly_due')}
               className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border flex items-center space-x-1 ${
                 filterType === 'monthly_due'
-                  ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                  : 'bg-amber-50 dark:bg-amber-950/50 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-700/80 animate-pulse'
+                  ? 'bg-amber-600 dark:bg-amber-500/30 text-white dark:text-amber-200 border-amber-600 dark:border-amber-500/50 shadow-sm'
+                  : 'bg-amber-50 dark:bg-amber-500/20 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-soft-pulse'
               }`}
             >
               <Bell className="w-3.5 h-3.5 fill-current" />
@@ -350,10 +350,10 @@ export default function VillageView({
             return (
               <div
                 key={cust.rowIndex}
-                className={`bg-white dark:bg-slate-900 rounded-2xl border transition-all overflow-hidden ${
+                className={`bg-white dark:bg-[#0D1527] rounded-2xl border transition-all overflow-hidden ${
                   cust.isStruckOut
-                    ? 'border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40 opacity-60'
-                    : 'border-slate-200 dark:border-slate-800 shadow-sm hover:border-teal-400 dark:hover:border-teal-500 hover:shadow-md'
+                    ? 'border-slate-200 dark:border-white/[0.05] bg-slate-50/70 dark:bg-[#090E1A] opacity-60'
+                    : 'border-slate-200 dark:border-white/[0.08] shadow-sm hover:border-emerald-500/50 dark:hover:border-emerald-500/50 hover:shadow-lg dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.65)]'
                 }`}
               >
                 {/* Card Top Row: S.No, Name, Badges */}
@@ -364,8 +364,8 @@ export default function VillageView({
                       <span
                         className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
                           cust.isStruckOut
-                            ? 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                            : 'bg-teal-700 text-white shadow-sm'
+                            ? 'bg-slate-200 dark:bg-[#131C30] text-slate-600 dark:text-slate-400'
+                            : 'bg-gradient-to-br from-teal-600 to-emerald-600 text-white shadow-md shadow-emerald-600/30'
                         }`}
                       >
                         #{cust.sNo}
@@ -381,7 +381,7 @@ export default function VillageView({
                             {cust.nameTe}
                           </h3>
                           {cust.nameEn && (
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                               ({cust.nameEn})
                             </span>
                           )}
@@ -390,7 +390,7 @@ export default function VillageView({
                         {/* Badges row */}
                         <div className="flex flex-wrap items-center gap-1 mt-1.5">
                           {cust.colony && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-[#131C30] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/[0.08]">
                               {cust.colony} కాలనీ
                             </span>
                           )}
@@ -401,10 +401,10 @@ export default function VillageView({
                                 <span
                                   className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center space-x-1 ${
                                     st?.type === 'due_this_saturday'
-                                      ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 border-amber-400 dark:border-amber-600 animate-pulse'
+                                      ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-950 dark:text-amber-200 border-amber-400 dark:border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-soft-pulse font-extrabold'
                                       : st?.type === 'overdue'
-                                      ? 'bg-rose-100 dark:bg-rose-950/80 text-rose-900 dark:text-rose-200 border-rose-300 dark:border-rose-700'
-                                      : 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60'
+                                      ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-950 dark:text-rose-200 border-rose-300 dark:border-rose-500/50 shadow-[0_0_12px_rgba(244,63,94,0.25)] font-extrabold'
+                                      : 'bg-purple-100 dark:bg-purple-500/20 text-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-500/40 font-bold'
                                   }`}
                                 >
                                   <span>{st?.badgeTe || 'నెల స్కీమ్'}</span>
@@ -412,26 +412,26 @@ export default function VillageView({
                               );
                             })()
                           ) : (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-50 dark:bg-teal-500/20 text-teal-900 dark:text-teal-300 border border-teal-200 dark:border-teal-500/40">
                               25 వారాల స్కీమ్
                             </span>
                           )}
 
                           {cust.hasPhoneReminder && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-700/80 flex items-center space-x-1 animate-pulse">
-                              <Bell className="w-3 h-3 fill-amber-700 text-amber-700 dark:text-amber-400" />
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-100 dark:bg-amber-500/25 text-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-500/50 flex items-center space-x-1 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-soft-pulse">
+                              <Bell className="w-3 h-3 fill-amber-600 text-amber-600 dark:fill-amber-400 dark:text-amber-400" />
                               <span>ఫోన్ చేయాలి (P)</span>
                             </span>
                           )}
 
                           {cust.isStruckOut && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border border-rose-200 dark:border-rose-800/60">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-rose-100 dark:bg-rose-500/20 text-rose-900 dark:text-rose-300 border border-rose-200 dark:border-rose-500/40">
                               ఖాతా ముగిసింది (Struck out)
                             </span>
                           )}
 
                           {cust.surety && (
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800/60">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 dark:bg-blue-500/20 text-blue-900 dark:text-blue-300 border border-blue-200 dark:border-blue-500/40">
                               ష్యూరిటీ: #{cust.surety}
                             </span>
                           )}
@@ -444,7 +444,7 @@ export default function VillageView({
                       <a
                         href={`tel:${cust.phone}`}
                         title={`Call ${cust.phone}`}
-                        className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-sm"
+                        className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 hover:bg-emerald-100 dark:hover:bg-emerald-500/25 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-500/30 flex items-center justify-center shrink-0 active:scale-95 transition-all shadow-sm"
                       >
                         <Phone className="w-4 h-4 fill-emerald-600 text-emerald-600 dark:fill-emerald-400 dark:text-emerald-400" />
                       </a>
@@ -452,7 +452,7 @@ export default function VillageView({
                       <button
                         onClick={() => onOpenEditCustomer(cust, sheetTitle)}
                         title="ఫోన్ నంబర్ జోడించండి"
-                        className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center shrink-0 transition-colors"
+                        className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-[#131C30] text-slate-400 hover:bg-slate-200 dark:hover:bg-[#1A2642] flex items-center justify-center shrink-0 transition-colors"
                       >
                         <Phone className="w-4 h-4" />
                       </button>
@@ -460,23 +460,23 @@ export default function VillageView({
                   </div>
 
                   {/* Financial Stats Grid */}
-                  <div className="grid grid-cols-3 gap-2 mt-3.5 p-2.5 bg-slate-50/80 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-700/60 text-center">
+                  <div className="grid grid-cols-3 gap-2 mt-3.5 p-2.5 bg-slate-50/80 dark:bg-[#131C30]/80 rounded-xl border border-slate-200/80 dark:border-white/[0.06] text-center">
                     <div>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block">మొత్తం స్కీమ్</span>
-                      <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">మొత్తం స్కీమ్</span>
+                      <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
                         {formatINR(cust.amount)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block">వసూలైనది</span>
-                      <span className="text-xs sm:text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">వసూలైనది</span>
+                      <span className="text-xs sm:text-sm font-black text-emerald-700 dark:text-emerald-400">
                         {formatINR(cust.totalPaid)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold block">మిగిలిన బాకీ</span>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-bold block">మిగిలిన బాకీ</span>
                       <span
-                        className={`text-xs sm:text-sm font-bold ${
+                        className={`text-xs sm:text-sm font-black ${
                           cust.remainingDue > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400 dark:text-slate-500'
                         }`}
                       >
@@ -492,13 +492,13 @@ export default function VillageView({
                       const status = getMonthlyCustomerStatus(cust, 20261121);
 
                       return (
-                        <div className="mt-3 p-3 bg-purple-50/40 dark:bg-purple-950/20 rounded-2xl border border-purple-100 dark:border-purple-900/40 space-y-2.5">
+                        <div className="mt-3 p-3 bg-purple-50/40 dark:bg-[#16122C]/70 rounded-2xl border border-purple-100 dark:border-purple-500/25 space-y-2.5">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs">
                             <div className="flex items-center space-x-1.5 font-bold text-purple-950 dark:text-purple-200">
                               <Calendar className="w-4 h-4 text-purple-700 dark:text-purple-400" />
                               <span>నెలవారీ వాయిదాలు (చేరిన తేదీ: {cust.date}):</span>
                             </div>
-                            <div className="text-[11px] font-bold text-purple-800 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-2 py-0.5 rounded-lg self-start sm:self-auto">
+                            <div className="text-[11px] font-bold text-purple-900 dark:text-purple-200 bg-purple-100 dark:bg-purple-500/20 px-2 py-0.5 rounded-lg border border-purple-200 dark:border-purple-500/30 self-start sm:self-auto">
                               {monthlyPaidPayments.length} / {standardMonthsCount} నెలలు వసూలయ్యాయి
                             </div>
                           </div>
@@ -508,10 +508,10 @@ export default function VillageView({
                             <div
                               className={`p-2.5 rounded-xl border flex items-center justify-between text-xs ${
                                 status.type === 'due_this_saturday'
-                                  ? 'bg-amber-100/90 dark:bg-amber-950/70 border-amber-300 dark:border-amber-700 text-amber-950 dark:text-amber-100 font-bold'
+                                  ? 'bg-amber-100/90 dark:bg-amber-500/20 border-amber-300 dark:border-amber-500/50 text-amber-950 dark:text-amber-100 font-bold shadow-[0_0_14px_rgba(245,158,11,0.2)]'
                                   : status.type === 'overdue'
-                                  ? 'bg-rose-100/90 dark:bg-rose-950/70 border-rose-300 dark:border-rose-700 text-rose-950 dark:text-rose-100 font-bold'
-                                  : 'bg-white/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                                  ? 'bg-rose-100/90 dark:bg-rose-500/20 border-rose-300 dark:border-rose-500/50 text-rose-950 dark:text-rose-100 font-bold shadow-[0_0_14px_rgba(244,63,94,0.2)]'
+                                  : 'bg-white/80 dark:bg-[#131C30] border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-300'
                               }`}
                             >
                               <div className="flex items-center space-x-2">
@@ -533,9 +533,9 @@ export default function VillageView({
                               </div>
                               <button
                                 onClick={() => onOpenCollection(cust, sheetTitle)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 shadow-sm active:scale-95 transition-all ${
+                                className={`px-3 py-1.5 rounded-xl text-xs font-black shrink-0 shadow-sm active:scale-95 transition-all ${
                                   status.isDueThisSaturday
-                                    ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                                    ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white shadow-[0_0_14px_rgba(245,158,11,0.35)]'
                                     : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200'
                                 }`}
                               >
@@ -556,9 +556,9 @@ export default function VillageView({
                                 return (
                                   <div
                                     key={mIdx}
-                                    className="px-2.5 py-1.5 rounded-xl border shrink-0 text-center bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700/80 text-emerald-900 dark:text-emerald-200 font-bold"
+                                    className="px-2.5 py-1.5 rounded-xl border shrink-0 text-center bg-emerald-50 dark:bg-emerald-500/15 border-emerald-300 dark:border-emerald-500/40 text-emerald-950 dark:text-emerald-200 font-bold shadow-[0_0_8px_rgba(16,185,129,0.12)]"
                                   >
-                                    <div className="text-[9px] text-emerald-700 dark:text-emerald-300 leading-tight font-black">
+                                    <div className="text-[9px] text-emerald-700 dark:text-emerald-400 leading-tight font-black">
                                       {mIdx + 1}వ నెల
                                     </div>
                                     <div className="text-[8px] text-emerald-600 dark:text-emerald-400 leading-none mt-0.5 font-medium">
@@ -567,7 +567,7 @@ export default function VillageView({
                                     <div className="text-xs font-black mt-1 leading-tight flex items-center justify-center space-x-0.5">
                                       <span>₹{payment.amount}</span>
                                       {payment.isUPI && (
-                                        <span className="text-[8px] bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 px-1 rounded">UPI</span>
+                                        <span className="text-[8px] bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 px-1 rounded">UPI</span>
                                       )}
                                     </div>
                                   </div>
@@ -581,10 +581,10 @@ export default function VillageView({
                                     onClick={() => onOpenCollection(cust, sheetTitle)}
                                     className={`px-2.5 py-1.5 rounded-xl border shrink-0 text-center font-bold active:scale-95 transition-all shadow-sm ${
                                       status?.type === 'due_this_saturday'
-                                        ? 'bg-amber-50 dark:bg-amber-950/60 border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-200 animate-pulse hover:bg-amber-100'
+                                        ? 'bg-amber-50 dark:bg-amber-500/25 border-amber-400 dark:border-amber-500/50 text-amber-950 dark:text-amber-100 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-soft-pulse hover:bg-amber-100'
                                         : status?.type === 'overdue'
-                                        ? 'bg-rose-50 dark:bg-rose-950/60 border-rose-300 dark:border-rose-700 text-rose-900 dark:text-rose-200 hover:bg-rose-100'
-                                        : 'bg-white dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100'
+                                        ? 'bg-rose-50 dark:bg-rose-500/25 border-rose-300 dark:border-rose-500/50 text-rose-950 dark:text-rose-100 hover:bg-rose-100'
+                                        : 'bg-white dark:bg-[#131C30] border-slate-300 dark:border-white/[0.1] text-slate-700 dark:text-slate-200 hover:bg-slate-100'
                                     }`}
                                   >
                                     <div className="text-[9px] opacity-80 leading-tight font-black">
@@ -593,7 +593,7 @@ export default function VillageView({
                                     <div className="text-[8px] opacity-75 leading-none mt-0.5 font-medium">
                                       {mDue?.short || ''} ({mDue?.satOccurrence}వ శని)
                                     </div>
-                                    <div className="text-xs font-bold mt-1 leading-tight text-amber-800 dark:text-amber-200">
+                                    <div className="text-xs font-black mt-1 leading-tight text-amber-800 dark:text-amber-300">
                                       వసూలు ➔
                                     </div>
                                   </button>
@@ -604,7 +604,7 @@ export default function VillageView({
                               return (
                                 <div
                                   key={mIdx}
-                                  className="px-2.5 py-1.5 rounded-xl border shrink-0 text-center bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 font-medium"
+                                  className="px-2.5 py-1.5 rounded-xl border shrink-0 text-center bg-white dark:bg-[#131C30]/60 border-slate-200 dark:border-white/[0.06] text-slate-400 dark:text-slate-400 font-medium"
                                 >
                                   <div className="text-[9px] leading-tight font-semibold">{mIdx + 1}వ నెల</div>
                                   <div className="text-[8px] opacity-60 leading-none mt-0.5">{mDue?.short || ''} ({mDue?.satOccurrence}వ శని)</div>
@@ -625,7 +625,7 @@ export default function VillageView({
 
                       if (applicableWeeklyPayments.length === 0) {
                         return (
-                          <div className="mt-3 flex items-center justify-between p-2.5 bg-teal-50/70 dark:bg-teal-950/40 rounded-xl border border-teal-200 dark:border-teal-800/60 text-xs">
+                          <div className="mt-3 flex items-center justify-between p-2.5 bg-teal-50/70 dark:bg-teal-500/10 rounded-xl border border-teal-200 dark:border-teal-500/25 text-xs">
                             <div className="flex items-center space-x-2">
                               <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0" />
                               <div>
@@ -639,7 +639,7 @@ export default function VillageView({
                             </div>
                             <button
                               onClick={() => onOpenCollection(cust, sheetTitle)}
-                              className="px-2.5 py-1 bg-teal-700 hover:bg-teal-800 text-white rounded-lg text-[11px] font-bold shrink-0 shadow-sm active:scale-95 transition-all"
+                              className="px-2.5 py-1 bg-gradient-to-r from-teal-700 to-emerald-600 hover:from-teal-600 hover:to-emerald-500 text-white rounded-lg text-[11px] font-bold shrink-0 shadow-sm active:scale-95 transition-all"
                             >
                               ముందస్తు వసూలు ➔
                             </button>
@@ -656,7 +656,7 @@ export default function VillageView({
                               <Calendar className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                               <span>వారం వాయిదాలు (చేరిన తేదీ: {cust.date}):</span>
                             </span>
-                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-[#131C30] px-1.5 py-0.5 rounded border border-slate-200 dark:border-white/[0.06]">
                               {paidCount} / {applicableWeeklyPayments.length} వసూలయ్యాయి
                             </span>
                           </div>
@@ -670,18 +670,18 @@ export default function VillageView({
                                   className={`px-2.5 py-1.5 rounded-xl shrink-0 border text-center transition-all ${
                                     isPaid
                                       ? p.isUPI
-                                        ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-800 font-bold'
-                                        : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800 font-bold'
-                                      : 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-700/80 font-bold animate-pulse hover:bg-amber-100'
+                                        ? 'bg-blue-50 dark:bg-blue-500/15 text-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-500/40 font-bold'
+                                        : 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-950 dark:text-emerald-200 border-emerald-200 dark:border-emerald-500/40 font-black shadow-[0_0_8px_rgba(16,185,129,0.12)]'
+                                      : 'bg-amber-50 dark:bg-amber-500/20 text-amber-950 dark:text-amber-200 border-amber-300 dark:border-amber-500/50 font-black shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-soft-pulse hover:bg-amber-100'
                                   }`}
                                 >
                                   <div className="text-[9px] text-slate-700 dark:text-slate-200 leading-tight font-black">
                                     {idx + 1}వ వారం
                                   </div>
-                                  <div className="text-[8px] text-slate-400 dark:text-slate-500 leading-none mt-0.5">
+                                  <div className="text-[8px] text-slate-400 dark:text-slate-400 leading-none mt-0.5">
                                     {p.weekHeader.match(/\(([^)]+)\)/)?.[1] || p.weekHeader.split(' ')[0]}
                                   </div>
-                                  <div className="leading-tight mt-1 font-bold">
+                                  <div className="leading-tight mt-1 font-black">
                                     {isPaid ? `₹${p.amount} ${p.isUPI ? '(UPI)' : ''}` : 'బాకీ ➔'}
                                   </div>
                                 </button>
@@ -695,14 +695,14 @@ export default function VillageView({
 
                   {/* Remarks preview if present */}
                   {cust.remarks && (
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 bg-slate-50 dark:bg-slate-800/60 p-1.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60 truncate">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 bg-slate-50 dark:bg-[#131C30]/70 p-1.5 rounded-lg border border-slate-200/60 dark:border-white/[0.06] truncate">
                       <strong className="text-slate-700 dark:text-slate-300">రిమార్క్స్:</strong> {cust.remarks}
                     </p>
                   )}
                 </div>
 
                 {/* Card Actions Footer */}
-                <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 transition-colors">
+                <div className="px-4 py-2.5 bg-slate-50 dark:bg-[#0A0F1D]/80 border-t border-slate-100 dark:border-white/[0.06] flex items-center justify-between gap-2 transition-colors">
                   {/* Photo & GPS indicator pills */}
                   <div className="flex items-center space-x-1.5">
                     {cust.gpsLocation && (
@@ -714,7 +714,7 @@ export default function VillageView({
                         }
                         target="_blank"
                         rel="noreferrer"
-                        className="p-1.5 bg-blue-100 dark:bg-blue-900/60 hover:bg-blue-200 dark:hover:bg-blue-900 text-blue-800 dark:text-blue-300 rounded-lg text-xs font-semibold flex items-center space-x-1"
+                        className="p-1.5 bg-blue-100 dark:bg-blue-500/20 hover:bg-blue-200 dark:hover:bg-blue-500/30 text-blue-800 dark:text-blue-300 rounded-lg text-xs font-semibold flex items-center space-x-1"
                         title="Google Maps లో లొకేషన్ చూడండి"
                       >
                         <MapPin className="w-3.5 h-3.5 text-blue-700 dark:text-blue-400" />
@@ -730,7 +730,7 @@ export default function VillageView({
                             `కార్డ్ ఫోటో - ${cust.nameTe} (#${cust.sNo})`
                           )
                         }
-                        className="p-1.5 bg-teal-100 dark:bg-teal-900/60 hover:bg-teal-200 dark:hover:bg-teal-900 text-teal-800 dark:text-teal-300 rounded-lg text-xs font-semibold flex items-center space-x-1"
+                        className="p-1.5 bg-teal-100 dark:bg-teal-500/20 hover:bg-teal-200 dark:hover:bg-teal-500/30 text-teal-800 dark:text-teal-300 rounded-lg text-xs font-semibold flex items-center space-x-1"
                         title="కార్డ్ ఫోటో చూడండి"
                       >
                         <Camera className="w-3.5 h-3.5 text-teal-700 dark:text-teal-400" />
@@ -746,7 +746,7 @@ export default function VillageView({
                             `ఇంటి ఫోటో - ${cust.nameTe} (#${cust.sNo})`
                           )
                         }
-                        className="p-1.5 bg-emerald-100 dark:bg-emerald-900/60 hover:bg-emerald-200 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs font-semibold flex items-center space-x-1"
+                        className="p-1.5 bg-emerald-100 dark:bg-emerald-500/20 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-xs font-semibold flex items-center space-x-1"
                         title="ఇంటి ఫోటో చూడండి"
                       >
                         <Camera className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
@@ -756,7 +756,7 @@ export default function VillageView({
 
                     <button
                       onClick={() => onOpenEditCustomer(cust, sheetTitle)}
-                      className="p-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold flex items-center space-x-1"
+                      className="p-1.5 bg-slate-200 dark:bg-[#131C30] hover:bg-slate-300 dark:hover:bg-[#1A2642] text-slate-700 dark:text-slate-300 rounded-lg text-xs font-semibold flex items-center space-x-1 border border-transparent dark:border-white/[0.06]"
                       title="ఫోటో, GPS లేదా వివరాలు సవరించండి"
                     >
                       <Edit className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
@@ -768,7 +768,7 @@ export default function VillageView({
                   {!cust.isStruckOut && (
                     <button
                       onClick={() => onOpenCollection(cust, sheetTitle)}
-                      className="px-3.5 py-1.5 bg-teal-700 hover:bg-teal-800 text-white rounded-xl text-xs font-bold shadow-sm active:scale-95 transition-all flex items-center space-x-1"
+                      className="px-3.5 py-1.5 bg-gradient-to-r from-teal-700 to-emerald-600 hover:from-teal-600 hover:to-emerald-500 text-white rounded-xl text-xs font-black shadow-md shadow-emerald-950/40 active:scale-95 transition-all flex items-center space-x-1"
                     >
                       <Banknote className="w-3.5 h-3.5" />
                       <span>{cust.isMonthly ? 'నెల వాయిదా నమోదు' : 'వసూలు నమోదు'}</span>
