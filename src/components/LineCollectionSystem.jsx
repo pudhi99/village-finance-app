@@ -53,8 +53,9 @@ export default function LineCollectionSystem({
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'map'
   const [villageFilter, setVillageFilter] = useState('all'); // 'all' | 'edurlanka' | 'kothapalli'
   const [radiusFilter, setRadiusFilter] = useState('all'); // 'all' | 50 | 100 | 250 | 500
-  const [typeFilter, setTypeFilter] = useState('due_only'); // 'due_only' | 'all' | 'weekly' | 'monthly_due' | 'promised' | 'collected' | 'no_gps'
+  const [typeFilter, setTypeFilter] = useState('due_only'); // 'due_only' | 'all' | 'all_gps' | 'weekly' | 'monthly_due' | 'promised' | 'collected' | 'no_gps'
   const [searchQuery, setSearchQuery] = useState('');
+  const [mapFilterMode, setMapFilterMode] = useState('all_pinned'); // 'all_pinned' | 'due_only'
 
   // Follow-up notes & local state (Promised to pay in 2-4 hrs)
   const [followUps, setFollowUps] = useState({});
@@ -295,7 +296,7 @@ export default function LineCollectionSystem({
         if (cust.isMonthly) {
           const st = getMonthlyCustomerStatus(cust, 20261121);
           isDueToday = cust.remainingDue > 0 && (st?.isDueThisSaturday || false);
-          dueBadgeText = st?.badgeTe || 'నెల స్కీమ్';
+          dueBadgeText = cust.remainingDue <= 0 ? 'మొత్తం పూర్తయింది' : (st?.badgeTe || 'నెల స్కీమ్');
           dueAmount = cust.amount === 14000 ? 1400 : 2100;
         } else {
           // Weekly scheme: check if has unpaid applicable installment
@@ -304,7 +305,14 @@ export default function LineCollectionSystem({
           );
           const hasUnpaid = applicable.some((p) => p.amount === 0) || applicable.length === 0;
           isDueToday = cust.remainingDue > 0 && hasUnpaid;
-          dueBadgeText = `${applicable.filter((p) => p.amount > 0).length + 1}వ వారం బాకీ`;
+          const paidWeeks = applicable.filter((p) => p.amount > 0).length;
+          if (cust.remainingDue <= 0) {
+            dueBadgeText = 'మొత్తం పూర్తయింది';
+          } else if (!isDueToday) {
+            dueBadgeText = `${paidWeeks}వ వారం వరకు చెల్లించారు`;
+          } else {
+            dueBadgeText = `${paidWeeks + 1}వ వారం బాకీ`;
+          }
         }
 
         const followUp = followUps[customerKey];
@@ -373,6 +381,9 @@ export default function LineCollectionSystem({
       if (typeFilter === 'due_only') {
         return c.isDueToday && !c.isPromised;
       }
+      if (typeFilter === 'all_gps') {
+        return c.hasGPS;
+      }
       if (typeFilter === 'weekly') {
         return !c.isMonthly && c.isDueToday;
       }
@@ -393,16 +404,47 @@ export default function LineCollectionSystem({
     });
   }, [processedCustomers, searchQuery, radiusFilter, typeFilter]);
 
+  // Dedicated Map customer list (shows all customers who have GPS, with optional due-only filter)
+  const mapCustomers = useMemo(() => {
+    return processedCustomers.filter((c) => {
+      if (!c.hasGPS) return false;
+
+      // search filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchName = c.nameTe?.toLowerCase().includes(q) || c.nameEn?.toLowerCase().includes(q);
+        const matchSNo = String(c.sNo) === q;
+        const matchPhone = c.phone?.includes(q);
+        const matchColony = c.colony?.toLowerCase().includes(q);
+        if (!matchName && !matchSNo && !matchPhone && !matchColony) return false;
+      }
+
+      // radius filter
+      if (radiusFilter !== 'all') {
+        const maxDist = Number(radiusFilter);
+        if (c.distanceMeters === null || c.distanceMeters > maxDist) return false;
+      }
+
+      // map filter toggle
+      if (mapFilterMode === 'due_only') {
+        return c.isDueToday;
+      }
+
+      return true;
+    });
+  }, [processedCustomers, searchQuery, radiusFilter, mapFilterMode]);
+
   // Counts for top chips
   const counts = useMemo(() => {
     const totalDue = processedCustomers.filter((c) => c.isDueToday).length;
     const weeklyDue = processedCustomers.filter((c) => !c.isMonthly && c.isDueToday).length;
     const monthlyDue = processedCustomers.filter((c) => c.isMonthly && c.isDueToday).length;
     const promisedCount = Object.keys(followUps).length;
+    const withGpsCount = processedCustomers.filter((c) => c.hasGPS).length;
     const noGpsCount = processedCustomers.filter((c) => !c.hasGPS).length;
     const within100m = processedCustomers.filter((c) => c.distanceMeters !== null && c.distanceMeters <= 100).length;
 
-    return { totalDue, weeklyDue, monthlyDue, promisedCount, noGpsCount, within100m };
+    return { totalDue, weeklyDue, monthlyDue, promisedCount, withGpsCount, noGpsCount, within100m };
   }, [processedCustomers, followUps]);
 
   return (
@@ -681,11 +723,21 @@ export default function LineCollectionSystem({
             తర్వాత ఇస్తామన్నవి ({counts.promisedCount})
           </button>
           <button
+            onClick={() => setTypeFilter('all_gps')}
+            className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
+              typeFilter === 'all_gps'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                : 'bg-white dark:bg-[#0D1527] text-blue-700 dark:text-blue-300 border-slate-200 dark:border-white/[0.08]'
+            }`}
+          >
+            📍 లొకేషన్ ఉన్నవారు ({counts.withGpsCount})
+          </button>
+          <button
             onClick={() => setTypeFilter('no_gps')}
             className={`px-3 py-1.5 rounded-xl font-bold whitespace-nowrap transition-all border ${
               typeFilter === 'no_gps'
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                : 'bg-white dark:bg-[#0D1527] text-blue-700 dark:text-blue-300 border-slate-200 dark:border-white/[0.08]'
+                ? 'bg-slate-700 text-white border-slate-700 shadow-sm'
+                : 'bg-white dark:bg-[#0D1527] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-white/[0.08]'
             }`}
           >
             లొకేషన్ లేనివి ({counts.noGpsCount})
@@ -705,13 +757,44 @@ export default function LineCollectionSystem({
 
       {/* MAP VIEW (Option 2 - OpenStreetMap with Leaflet) */}
       {viewMode === 'map' ? (
-        <InteractiveLeafletMap
-          userCoords={userCoords}
-          customers={filteredCustomers}
-          onOneTapCollection={handleOneTapCollection}
-          onMarkFollowUp={handleMarkFollowUp}
-          onOpenCollection={onOpenCollection}
-        />
+        <div className="space-y-2">
+          {/* Map Top Switch: All Pinned vs Due Only */}
+          <div className="flex items-center justify-between bg-white dark:bg-[#0D1527] p-2.5 rounded-xl border border-slate-200 dark:border-white/[0.08] text-xs">
+            <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1">
+              <span>మ్యాప్‌లో చూపించాల్సినవి:</span>
+            </span>
+            <div className="flex items-center space-x-1.5">
+              <button
+                onClick={() => setMapFilterMode('all_pinned')}
+                className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                  mapFilterMode === 'all_pinned'
+                    ? 'bg-emerald-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-[#131C30] text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                📍 అందరి ఇళ్లు ({counts.withGpsCount})
+              </button>
+              <button
+                onClick={() => setMapFilterMode('due_only')}
+                className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-all ${
+                  mapFilterMode === 'due_only'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'bg-slate-100 dark:bg-[#131C30] text-slate-600 dark:text-slate-300'
+                }`}
+              >
+                🔥 కేవలం బాకీ ఉన్నవారు
+              </button>
+            </div>
+          </div>
+
+          <InteractiveLeafletMap
+            userCoords={userCoords}
+            customers={mapCustomers}
+            onOneTapCollection={handleOneTapCollection}
+            onMarkFollowUp={handleMarkFollowUp}
+            onOpenCollection={onOpenCollection}
+          />
+        </div>
       ) : (
         /* RADAR LIST VIEW (Option 1 - Default & Primary) */
         <div className="space-y-3">
@@ -864,45 +947,73 @@ export default function LineCollectionSystem({
                     </div>
 
                     {/* RAPID ACTION BUTTONS (1-Tap Collection, Promise, Navigate, Pin GPS) */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-                      {/* 1. Fast Cash Collection */}
-                      <button
-                        onClick={() => handleOneTapCollection(c, c.sheetTitle, c.weekColumns, 'Cash')}
-                        disabled={isActionBusy}
-                        className="py-2 px-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-950/30 flex items-center justify-center space-x-1 active:scale-95 transition-all disabled:opacity-50"
-                      >
-                        <Banknote className="w-3.5 h-3.5" />
-                        <span>{formatINR(c.dueAmount)} నగదు</span>
-                      </button>
+                    {c.remainingDue <= 0 ? (
+                      <div className="flex items-center justify-between p-2.5 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-xl mt-3 text-xs">
+                        <span className="font-bold text-emerald-800 dark:text-emerald-300 flex items-center space-x-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                          <span>ఈ ఖాతా పూర్తిగా చెల్లించబడింది (No Dues)</span>
+                        </span>
+                        <button
+                          onClick={() => onOpenCollection(c, c.sheetTitle)}
+                          className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300 underline"
+                        >
+                          వివరాలు చూడండి ➔
+                        </button>
+                      </div>
+                    ) : !c.isDueToday ? (
+                      <div className="flex items-center justify-between p-2.5 bg-slate-100 dark:bg-[#131C30] border border-slate-200 dark:border-white/[0.08] rounded-xl mt-3 text-xs">
+                        <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center space-x-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          <span>ఈ వారం వాయిదా చెల్లించారు</span>
+                        </span>
+                        <button
+                          onClick={() => onOpenCollection(c, c.sheetTitle)}
+                          className="text-[11px] font-bold text-teal-600 dark:text-teal-400 underline"
+                        >
+                          ముందస్తు వసూలు ➔
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+                        {/* 1. Fast Cash Collection */}
+                        <button
+                          onClick={() => handleOneTapCollection(c, c.sheetTitle, c.weekColumns, 'Cash')}
+                          disabled={isActionBusy}
+                          className="py-2 px-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-950/30 flex items-center justify-center space-x-1 active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          <Banknote className="w-3.5 h-3.5" />
+                          <span>{formatINR(c.dueAmount)} నగదు</span>
+                        </button>
 
-                      {/* 2. Fast UPI Collection */}
-                      <button
-                        onClick={() => handleOneTapCollection(c, c.sheetTitle, c.weekColumns, 'UPI')}
-                        disabled={isActionBusy}
-                        className="py-2 px-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-md shadow-blue-950/30 flex items-center justify-center space-x-1 active:scale-95 transition-all disabled:opacity-50"
-                      >
-                        <CreditCard className="w-3.5 h-3.5" />
-                        <span>{formatINR(c.dueAmount)} UPI</span>
-                      </button>
+                        {/* 2. Fast UPI Collection */}
+                        <button
+                          onClick={() => handleOneTapCollection(c, c.sheetTitle, c.weekColumns, 'UPI')}
+                          disabled={isActionBusy}
+                          className="py-2 px-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-md shadow-blue-950/30 flex items-center justify-center space-x-1 active:scale-95 transition-all disabled:opacity-50"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                          <span>{formatINR(c.dueAmount)} UPI</span>
+                        </button>
 
-                      {/* 3. Promised in 2-4 hours */}
-                      <button
-                        onClick={() => handleMarkFollowUp(c.customerKey, '2-3 గంటల్లో వేస్తా')}
-                        className="py-2 px-2.5 bg-purple-100 dark:bg-purple-500/20 hover:bg-purple-200 dark:hover:bg-purple-500/30 text-purple-900 dark:text-purple-200 font-black text-xs rounded-xl border border-purple-300 dark:border-purple-500/40 flex items-center justify-center space-x-1 active:scale-95 transition-all"
-                      >
-                        <Clock className="w-3.5 h-3.5" />
-                        <span>తర్వాత వేస్తా</span>
-                      </button>
+                        {/* 3. Promised in 2-4 hours */}
+                        <button
+                          onClick={() => handleMarkFollowUp(c.customerKey, '2-3 గంటల్లో వేస్తా')}
+                          className="py-2 px-2.5 bg-purple-100 dark:bg-purple-500/20 hover:bg-purple-200 dark:hover:bg-purple-500/30 text-purple-900 dark:text-purple-200 font-black text-xs rounded-xl border border-purple-300 dark:border-purple-500/40 flex items-center justify-center space-x-1 active:scale-95 transition-all"
+                        >
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>తర్వాత వేస్తా</span>
+                        </button>
 
-                      {/* 4. More Options / Custom Amount */}
-                      <button
-                        onClick={() => onOpenCollection(c, c.sheetTitle)}
-                        className="py-2 px-2.5 bg-slate-100 dark:bg-[#131C30] hover:bg-slate-200 dark:hover:bg-[#1A2642] text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl border border-slate-200 dark:border-white/[0.08] flex items-center justify-center space-x-1 active:scale-95 transition-all"
-                      >
-                        <Zap className="w-3.5 h-3.5" />
-                        <span>కస్టమ్ మొత్తం ➔</span>
-                      </button>
-                    </div>
+                        {/* 4. More Options / Custom Amount */}
+                        <button
+                          onClick={() => onOpenCollection(c, c.sheetTitle)}
+                          className="py-2 px-2.5 bg-slate-100 dark:bg-[#131C30] hover:bg-slate-200 dark:hover:bg-[#1A2642] text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl border border-slate-200 dark:border-white/[0.08] flex items-center justify-center space-x-1 active:scale-95 transition-all"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>కస్టమ్ మొత్తం ➔</span>
+                        </button>
+                      </div>
+                    )}
 
                     {/* Secondary Row: Pin GPS & Google Maps Directions */}
                     <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100 dark:border-white/[0.06] text-xs">
@@ -1065,29 +1176,43 @@ function InteractiveLeafletMap({
       // Purple (#9333EA) for Promised
       // Gray (#64748B) for Paid / Not due
       let pinColor = '#10B981';
-      if (c.isPromised) pinColor = '#9333EA';
-      else if (c.isMonthly && c.isDueToday) pinColor = '#F59E0B';
-      else if (!c.isDueToday) pinColor = '#64748B';
+      let pinText = `#${c.sNo}`;
+      if (c.isPromised) {
+        pinColor = '#9333EA';
+      } else if (c.isMonthly && c.isDueToday) {
+        pinColor = '#F59E0B';
+      } else if (c.remainingDue <= 0 || !c.isDueToday) {
+        pinColor = '#64748B';
+        pinText = '✓';
+      }
 
       const customPin = L.divIcon({
         className: 'custom-customer-pin',
         html: `
-          <div style="background-color: ${pinColor}; width: 28px; height: 28px; border-radius: 9999px; border: 2.5px solid #FFFFFF; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 900; font-size: 10px; font-family: sans-serif;">
-            #${c.sNo}
+          <div style="background-color: ${pinColor}; width: 28px; height: 28px; border-radius: 9999px; border: 2.5px solid #FFFFFF; box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; color: #FFFFFF; font-weight: 900; font-size: ${pinText === '✓' ? '13px' : '10px'}; font-family: sans-serif;">
+            ${pinText}
           </div>
         `,
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });
 
+      const statusHtml =
+        c.remainingDue <= 0
+          ? '<div style="font-size: 11px; font-weight: 800; color: #059669; margin: 4px 0;">✅ పూర్తిగా చెల్లించారు (Paid in Full)</div>'
+          : !c.isDueToday
+          ? '<div style="font-size: 11px; font-weight: 800; color: #059669; margin: 4px 0;">✅ ఈ వారం వసూలైంది</div>'
+          : `<div style="font-size: 12px; font-weight: 800; color: #E11D48; margin: 4px 0;">బాకీ: ₹${c.dueAmount} (${c.dueBadgeText})</div>`;
+
       const popupHtml = `
-        <div style="font-family: system-ui, sans-serif; min-width: 170px; padding: 2px;">
+        <div style="font-family: system-ui, sans-serif; min-width: 175px; padding: 2px;">
           <div style="font-weight: 900; font-size: 13px; color: #0F172A;">#${c.sNo} ${c.nameTe}</div>
           <div style="font-size: 11px; color: #64748B; margin-top: 2px;">${c.villageLabel} ${c.colony ? '• ' + c.colony : ''}</div>
-          <div style="font-size: 12px; font-weight: 800; color: #059669; margin: 4px 0;">బాకీ: ₹${c.dueAmount}</div>
+          ${statusHtml}
           ${c.distanceMeters !== null ? `<div style="font-size: 10px; font-weight: 700; color: #2563EB;">దూరం: ${formatDistance(c.distanceMeters)}</div>` : ''}
-          <div style="margin-top: 8px;">
-            <a href="tel:${c.phone || ''}" style="display: block; background: #059669; color: white; text-align: center; font-weight: bold; font-size: 11px; padding: 5px 8px; border-radius: 8px; text-decoration: none;">📞 కాల్ చేయండి</a>
+          <div style="margin-top: 8px; display: flex; gap: 4px;">
+            ${c.phone ? `<a href="tel:${c.phone}" style="flex: 1; background: #059669; color: white; text-align: center; font-weight: bold; font-size: 11px; padding: 5px 6px; border-radius: 8px; text-decoration: none;">📞 కాల్</a>` : ''}
+            <a href="https://www.google.com/maps/dir/?api=1&destination=${c.coords.lat},${c.coords.lng}" target="_blank" rel="noreferrer" style="flex: 1; background: #2563EB; color: white; text-align: center; font-weight: bold; font-size: 11px; padding: 5px 6px; border-radius: 8px; text-decoration: none;">🧭 రూట్</a>
           </div>
         </div>
       `;
@@ -1096,6 +1221,17 @@ function InteractiveLeafletMap({
         .addTo(group)
         .bindPopup(popupHtml);
     });
+
+    if (customers.some((c) => c.coords)) {
+      const validPoints = customers.filter((c) => c.coords).map((c) => [c.coords.lat, c.coords.lng]);
+      if (userCoords) validPoints.push([userCoords.lat, userCoords.lng]);
+      if (validPoints.length > 0) {
+        try {
+          const bounds = L.latLngBounds(validPoints);
+          mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+        } catch (e) {}
+      }
+    }
   }, [isLeafletReady, customers]);
 
   return (
@@ -1117,6 +1253,10 @@ function InteractiveLeafletMap({
           <span className="flex items-center space-x-1">
             <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
             <span className="text-slate-600 dark:text-slate-300">తర్వాత</span>
+          </span>
+          <span className="flex items-center space-x-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-slate-500" />
+            <span className="text-slate-600 dark:text-slate-300">పూర్తయింది</span>
           </span>
         </div>
       </div>

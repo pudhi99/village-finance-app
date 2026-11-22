@@ -213,34 +213,78 @@ export function getMonthlyCustomerStatus(customer, currentSaturdayComparable = 2
 }
 
 /**
- * Extracts { lat, lng } from various string formats (lat,lng or Google Maps URLs)
+ * Converts DMS (Degrees, Minutes, Seconds) to Decimal Degrees
+ */
+function dmsToDecimal(degrees, minutes, seconds, direction) {
+  let dd = parseFloat(degrees) + parseFloat(minutes) / 60 + parseFloat(seconds) / 3600;
+  const dir = String(direction).toUpperCase();
+  if (dir === 'S' || dir === 'W') {
+    dd = dd * -1;
+  }
+  return dd;
+}
+
+/**
+ * Extracts { lat, lng } from any string format:
+ * - Decimal: "16.51234, 82.12345"
+ * - DMS: 16°40'37.6"N 82°12'09.3"E
+ * - Google Maps URL: ?q=lat,lng or @lat,lng or !3dlat!4dlng
  */
 export function extractCoordinates(gpsLocation) {
   if (!gpsLocation || typeof gpsLocation !== "string") return null;
   const str = gpsLocation.trim();
   if (!str) return null;
 
-  // 1. Direct "16.51234, 82.12345" or "16.51234,82.12345"
-  const directMatch = str.match(/^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/);
+  // Decode URI component if encoded (e.g. %C2%B0 for °, %22 for ")
+  let decoded = str;
+  try {
+    decoded = decodeURIComponent(str);
+  } catch (e) {}
+
+  // 1. Direct decimal pair e.g. "16.51234, 82.12345" or "16.51234,82.12345"
+  const directMatch = decoded.match(/^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/);
   if (directMatch) {
     const lat = parseFloat(directMatch[1]);
     const lng = parseFloat(directMatch[3]);
     if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
   }
 
-  // 2. Google Maps URLs: ?q=16.51234,82.12345 or @16.51234,82.12345 or ll=16.51234,82.12345
+  // 2. Google Maps URL with ?q=lat,lng or @lat,lng or ll=lat,lng
   const urlMatch =
-    str.match(/[?&]q=(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/) ||
-    str.match(/@(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/) ||
-    str.match(/ll=(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/);
+    decoded.match(/[?&]q=(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/) ||
+    decoded.match(/@(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/) ||
+    decoded.match(/ll=(-?\d+(\.\d+)?),(-?\d+(\.\d+)?)/);
   if (urlMatch) {
     const lat = parseFloat(urlMatch[1]);
     const lng = parseFloat(urlMatch[3]);
     if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
   }
 
-  // 3. Any pair of two floating point numbers separated by comma
-  const genericMatch = str.match(/(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)/);
+  // 3. Google Maps place URL with !3d{lat}!4d{lng}
+  const placePinMatch = decoded.match(/!3d(-?\d+(\.\d+)?)!4d(-?\d+(\.\d+)?)/);
+  if (placePinMatch) {
+    const lat = parseFloat(placePinMatch[1]);
+    const lng = parseFloat(placePinMatch[3]);
+    if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
+  }
+
+  // 4. DMS format e.g. "16°40'37.6\"N 82°12'09.3\"E" or "16°40'33.1\"N+82°12'13.9\"E"
+  const dmsRegex = /(\d+)\s*°\s*(\d+)\s*['’′]\s*(\d+(\.\d+)?)\s*["”″]?\s*([NSEWnsew])/g;
+  const matches = [...decoded.matchAll(dmsRegex)];
+  if (matches.length >= 2) {
+    const latMatch = matches.find(m => m[5].toUpperCase() === 'N' || m[5].toUpperCase() === 'S') || matches[0];
+    const lngMatch = matches.find(m => m[5].toUpperCase() === 'E' || m[5].toUpperCase() === 'W') || matches[1];
+
+    const lat = dmsToDecimal(latMatch[1], latMatch[2], latMatch[3], latMatch[5]);
+    const lng = dmsToDecimal(lngMatch[1], lngMatch[2], lngMatch[3], lngMatch[5]);
+
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return { lat, lng };
+    }
+  }
+
+  // 5. Generic two decimal numbers separated by comma or space
+  const genericMatch = decoded.match(/(-?\d+\.\d{3,})\s*[, ]\s*(-?\d+\.\d{3,})/);
   if (genericMatch) {
     const lat = parseFloat(genericMatch[1]);
     const lng = parseFloat(genericMatch[2]);

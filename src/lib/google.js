@@ -16,6 +16,37 @@ export function colIndexToLetter(colIndex) {
 
 let cachedAuth = null;
 
+// Cache for resolved shortened URLs (e.g. goo.gl/maps, maps.app.goo.gl)
+const shortUrlCache = new Map();
+
+export async function resolveShortGpsUrl(rawGps) {
+  if (!rawGps || typeof rawGps !== 'string') return rawGps;
+  const trimmed = rawGps.trim();
+  if (
+    trimmed.includes('goo.gl/maps') ||
+    trimmed.includes('maps.app.goo.gl') ||
+    trimmed.includes('app.goo.gl') ||
+    trimmed.includes('bit.ly')
+  ) {
+    if (shortUrlCache.has(trimmed)) {
+      return shortUrlCache.get(trimmed);
+    }
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(trimmed, { method: 'GET', redirect: 'follow', signal: controller.signal });
+      clearTimeout(timer);
+      if (res && res.url) {
+        shortUrlCache.set(trimmed, res.url);
+        return res.url;
+      }
+    } catch (e) {
+      console.warn('Could not resolve short GPS url:', trimmed, e.message);
+    }
+  }
+  return rawGps;
+}
+
 function getAuth() {
   if (cachedAuth) return cachedAuth;
 
@@ -216,6 +247,20 @@ export async function getVillageData(sheetTitle) {
     });
   }
 
+  // Resolve any shortened GPS URLs in parallel (e.g. goo.gl/maps, maps.app.goo.gl)
+  await Promise.all(
+    customers.map(async (cust) => {
+      if (
+        cust.gpsLocation &&
+        (cust.gpsLocation.includes('goo.gl') ||
+          cust.gpsLocation.includes('maps.app') ||
+          cust.gpsLocation.includes('bit.ly'))
+      ) {
+        cust.gpsLocation = await resolveShortGpsUrl(cust.gpsLocation);
+      }
+    })
+  );
+
   return {
     sheetTitle,
     headerRow,
@@ -363,8 +408,18 @@ export async function addCustomer({ sheetTitle, customerData }) {
     rowValues[customerData.initialWeekColIndex] = wkVal;
   }
 
+  let resolvedGps = customerData.gpsLocation || '';
+  if (
+    resolvedGps &&
+    (resolvedGps.includes('goo.gl') ||
+      resolvedGps.includes('maps.app') ||
+      resolvedGps.includes('bit.ly'))
+  ) {
+    resolvedGps = await resolveShortGpsUrl(resolvedGps);
+  }
+
   rowValues[villageData.remarksColIdx] = customerData.remarks || '';
-  rowValues[villageData.gpsColIdx] = customerData.gpsLocation || '';
+  rowValues[villageData.gpsColIdx] = resolvedGps;
   rowValues[villageData.cardPhotoColIdx] = customerData.cardPhoto || '';
   rowValues[villageData.housePhotoColIdx] = customerData.housePhoto || '';
 
@@ -407,8 +462,17 @@ export async function updateCustomer({ sheetTitle, rowIndex, updates }) {
     updatesList.push({ range: `'${sheetTitle}'!${colLetter}${rowIndex}`, values: [[updates.remarks]] });
   }
   if (updates.gpsLocation !== undefined) {
+    let resolvedGps = updates.gpsLocation;
+    if (
+      resolvedGps &&
+      (resolvedGps.includes('goo.gl') ||
+        resolvedGps.includes('maps.app') ||
+        resolvedGps.includes('bit.ly'))
+    ) {
+      resolvedGps = await resolveShortGpsUrl(resolvedGps);
+    }
     const colLetter = colIndexToLetter(villageData.gpsColIdx);
-    updatesList.push({ range: `'${sheetTitle}'!${colLetter}${rowIndex}`, values: [[updates.gpsLocation]] });
+    updatesList.push({ range: `'${sheetTitle}'!${colLetter}${rowIndex}`, values: [[resolvedGps]] });
   }
   if (updates.cardPhoto !== undefined) {
     const colLetter = colIndexToLetter(villageData.cardPhotoColIdx);
