@@ -790,6 +790,7 @@ export default function LineCollectionSystem({
           <InteractiveLeafletMap
             userCoords={userCoords}
             customers={mapCustomers}
+            villageFilter={villageFilter}
             onOneTapCollection={handleOneTapCollection}
             onMarkFollowUp={handleMarkFollowUp}
             onOpenCollection={onOpenCollection}
@@ -1064,6 +1065,7 @@ export default function LineCollectionSystem({
 function InteractiveLeafletMap({
   userCoords,
   customers,
+  villageFilter,
   onOneTapCollection,
   onMarkFollowUp,
   onOpenCollection,
@@ -1072,7 +1074,13 @@ function InteractiveLeafletMap({
   const mapInstanceRef = useRef(null);
   const markersGroupRef = useRef(null);
   const userMarkerRef = useRef(null);
+  const hasInitialFittedRef = useRef(false);
   const [isLeafletReady, setIsLeafletReady] = useState(false);
+
+  // Reset auto-fit flag when user explicitly switches village
+  useEffect(() => {
+    hasInitialFittedRef.current = false;
+  }, [villageFilter]);
 
   // Dynamically inject Leaflet CSS & JS from unpkg (Zero build overhead, 100% free)
   useEffect(() => {
@@ -1131,7 +1139,7 @@ function InteractiveLeafletMap({
     };
   }, [isLeafletReady]);
 
-  // Update User Live Blue Dot Marker
+  // Update User Live Blue Dot Marker (does NOT reset map center or zoom)
   useEffect(() => {
     if (!isLeafletReady || !mapInstanceRef.current || !userCoords) return;
 
@@ -1159,7 +1167,29 @@ function InteractiveLeafletMap({
     }
   }, [isLeafletReady, userCoords]);
 
-  // Update Customer Pins on Map
+  // Recenter to user's current GPS location
+  const handleRecenterToUser = () => {
+    if (!mapInstanceRef.current || !userCoords) return;
+    mapInstanceRef.current.flyTo([userCoords.lat, userCoords.lng], 17, {
+      duration: 1,
+    });
+  };
+
+  // Fit all pins in view
+  const handleFitAllPins = () => {
+    if (!mapInstanceRef.current || !window.L) return;
+    const L = window.L;
+    const validPoints = customers.filter((c) => c.coords).map((c) => [c.coords.lat, c.coords.lng]);
+    if (userCoords) validPoints.push([userCoords.lat, userCoords.lng]);
+    if (validPoints.length > 0) {
+      try {
+        const bounds = L.latLngBounds(validPoints);
+        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+      } catch (e) {}
+    }
+  };
+
+  // Update Customer Pins on Map (NEVER resets user zoom/pan unless initial load)
   useEffect(() => {
     if (!isLeafletReady || !mapInstanceRef.current || !markersGroupRef.current) return;
 
@@ -1222,13 +1252,15 @@ function InteractiveLeafletMap({
         .bindPopup(popupHtml);
     });
 
-    if (customers.some((c) => c.coords)) {
+    // Auto-fit bounds ONLY on initial load or village change, NEVER during active user zooming/panning
+    if (!hasInitialFittedRef.current && customers.some((c) => c.coords)) {
       const validPoints = customers.filter((c) => c.coords).map((c) => [c.coords.lat, c.coords.lng]);
       if (userCoords) validPoints.push([userCoords.lat, userCoords.lng]);
       if (validPoints.length > 0) {
         try {
           const bounds = L.latLngBounds(validPoints);
           mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 17 });
+          hasInitialFittedRef.current = true;
         } catch (e) {}
       }
     }
@@ -1236,11 +1268,13 @@ function InteractiveLeafletMap({
 
   return (
     <div className="bg-white dark:bg-[#0D1527] rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm overflow-hidden p-2 space-y-2">
-      <div className="flex items-center justify-between px-2 pt-1 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-1.5 px-2 pt-1 text-xs">
         <span className="font-black text-slate-800 dark:text-white flex items-center space-x-1.5">
           <Compass className="w-4 h-4 text-teal-600 dark:text-teal-400" />
-          <span>ఓపెన్‌స్ట్రీట్‌మ్యాప్ (OpenStreetMap Live View)</span>
+          <span>ఓపెన్‌స్ట్రీట్‌మ్యాప్ (OpenStreetMap Live)</span>
         </span>
+
+        {/* Legend */}
         <div className="flex items-center space-x-2 text-[10px] font-bold">
           <span className="flex items-center space-x-1">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
@@ -1265,6 +1299,27 @@ function InteractiveLeafletMap({
         ref={mapContainerRef}
         className="w-full h-[460px] rounded-xl overflow-hidden border border-slate-200 dark:border-white/[0.06] relative z-10"
       >
+        {/* Floating Controls: Recenter to My GPS & Fit All Pins */}
+        <div className="absolute right-3 bottom-6 z-[500] flex flex-col space-y-2">
+          {userCoords && (
+            <button
+              onClick={handleRecenterToUser}
+              title="నా ప్రస్తుత లొకేషన్‌కి రీ-సెంటర్ చేయి (Recenter to My Location)"
+              className="w-10 h-10 rounded-xl bg-white dark:bg-[#0D1527] text-blue-600 dark:text-blue-400 shadow-xl border border-slate-200 dark:border-white/[0.1] flex items-center justify-center hover:bg-blue-50 dark:hover:bg-blue-900/30 active:scale-90 transition-all"
+            >
+              <LocateFixed className="w-5 h-5" />
+            </button>
+          )}
+
+          <button
+            onClick={handleFitAllPins}
+            title="అందరి ఇళ్లూ ఫ్రేమ్ చేయి (Fit All Pinned Houses)"
+            className="w-10 h-10 rounded-xl bg-white dark:bg-[#0D1527] text-emerald-600 dark:text-emerald-400 shadow-xl border border-slate-200 dark:border-white/[0.1] flex items-center justify-center hover:bg-emerald-50 dark:hover:bg-emerald-900/30 active:scale-90 transition-all"
+          >
+            <Compass className="w-5 h-5" />
+          </button>
+        </div>
+
         {!isLeafletReady && (
           <div className="h-full w-full flex items-center justify-center bg-slate-100 dark:bg-[#131C30] text-slate-500 font-bold text-xs space-x-2">
             <RefreshCw className="w-4 h-4 animate-spin" />
