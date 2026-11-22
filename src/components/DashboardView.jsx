@@ -246,89 +246,94 @@ export default function DashboardView({ data, onNavigate, onOpenAddCustomer }) {
         </div>
       </div>
 
-      {/* Partner Equity & Profit Distribution */}
-      <div className="bg-white dark:bg-[#0D1527] p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] transition-colors">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <ShieldCheck className="w-5 h-5 text-teal-700 dark:text-teal-400" />
-            <h3 className="font-black text-slate-900 dark:text-white text-base">
-              భాగస్వామ్య విభజన <span className="text-xs font-medium text-slate-500 dark:text-slate-400">(Partner Equity & Profit Split)</span>
-            </h3>
-          </div>
-          <button
-            onClick={() => onNavigate('investments')}
-            className="text-xs font-bold text-teal-700 dark:text-teal-300 hover:text-teal-800 dark:hover:text-white flex items-center space-x-1"
-          >
-            <span>పెట్టుబడుల వివరాలు</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {partnerEquity.map((partner) => (
-            <div
-              key={partner.name}
-              className="p-4 rounded-xl bg-slate-50 dark:bg-[#131C30]/80 border border-slate-200 dark:border-white/[0.06] space-y-2"
-            >
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-slate-900 dark:text-white text-sm">{partner.name}</span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
-                  {partner.sharePct} వాటా
-                </span>
+      {/* Desktop 2-Column Split: Partner Equity & Weekly Trend */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+        {/* Partner Equity & Profit Distribution */}
+        <div className="bg-white dark:bg-[#0D1527] p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] transition-colors flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <ShieldCheck className="w-5 h-5 text-teal-700 dark:text-teal-400" />
+                <h3 className="font-black text-slate-900 dark:text-white text-base">
+                  భాగస్వామ్య విభజన <span className="text-xs font-medium text-slate-500 dark:text-slate-400">(Equity Split)</span>
+                </h3>
               </div>
-              <div className="grid grid-cols-3 gap-1 pt-2 border-t border-slate-200/60 dark:border-white/[0.06] text-center">
-                <div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">పెట్టుబడి</span>
-                  <span className="text-xs font-black text-slate-800 dark:text-white">{formatINR(partner.invested)}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">అంచనా లాభం వాటా</span>
-                  <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">{formatINR(partner.expectedProfitShare)}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">మొత్తం విలువ</span>
-                  <span className="text-xs font-black text-teal-800 dark:text-teal-300">{formatINR(partner.totalValue)}</span>
-                </div>
-              </div>
+              <button
+                onClick={() => onNavigate('investments')}
+                className="text-xs font-bold text-teal-700 dark:text-teal-300 hover:text-teal-800 dark:hover:text-white flex items-center space-x-1"
+              >
+                <span>వివరాలు</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Weekly Collections Trend */}
-      {weeklyTrends && weeklyTrends.length > 0 && (
-        <div className="bg-white dark:bg-[#0D1527] p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] transition-colors">
-          <div className="flex items-center space-x-2 mb-3">
-            <Calendar className="w-5 h-5 text-teal-700 dark:text-teal-400" />
-            <h3 className="font-black text-slate-900 dark:text-white text-base">
-              వారం వారీ వసూళ్ల ట్రెండ్ <span className="text-xs font-medium text-slate-500 dark:text-slate-400">(Weekly Collection History)</span>
-            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {partnerEquity.map((partner) => (
+                <div
+                  key={partner.name}
+                  className="p-4 rounded-xl bg-slate-50 dark:bg-[#131C30]/80 border border-slate-200 dark:border-white/[0.06] space-y-2"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-900 dark:text-white text-sm">{partner.name}</span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-teal-100 dark:bg-teal-500/20 text-teal-800 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
+                      {partner.sharePct} వాటా
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 pt-2 border-t border-slate-200/60 dark:border-white/[0.06] text-center">
+                    <div>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">పెట్టుబడి</span>
+                      <span className="text-xs font-black text-slate-800 dark:text-white">{formatINR(partner.invested)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">లాభం వాటా</span>
+                      <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">{formatINR(partner.expectedProfitShare)}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">మొత్తం విలువ</span>
+                      <span className="text-xs font-black text-teal-800 dark:text-teal-300">{formatINR(partner.totalValue)}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
+        </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead>
-                <tr className="bg-slate-50 dark:bg-[#131C30] text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-white/[0.08]">
-                  <th className="py-2.5 px-3 font-bold">వారం (Week)</th>
-                  <th className="py-2.5 px-3 font-bold text-right">ఎదుర్లంక (Edurlanka)</th>
-                  <th className="py-2.5 px-3 font-bold text-right">కొత్తపల్లి (Kothapalli)</th>
-                  <th className="py-2.5 px-3 font-bold text-right text-teal-800 dark:text-teal-300">మొత్తం (Total)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
-                {weeklyTrends.map((trend, i) => (
-                  <tr key={i} className="hover:bg-slate-50/70 dark:hover:bg-[#131C30]/50 transition-colors">
-                    <td className="py-2.5 px-3 font-black text-slate-800 dark:text-white">{trend.header}</td>
-                    <td className="py-2.5 px-3 text-right font-medium text-slate-700 dark:text-slate-300">{formatINR(trend.edurlanka)}</td>
-                    <td className="py-2.5 px-3 text-right font-medium text-slate-700 dark:text-slate-300">{formatINR(trend.kothapalli)}</td>
-                    <td className="py-2.5 px-3 text-right font-black text-teal-800 dark:text-teal-300">{formatINR(trend.total)}</td>
+        {/* Weekly Collections Trend */}
+        {weeklyTrends && weeklyTrends.length > 0 && (
+          <div className="bg-white dark:bg-[#0D1527] p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] transition-colors">
+            <div className="flex items-center space-x-2 mb-3">
+              <Calendar className="w-5 h-5 text-teal-700 dark:text-teal-400" />
+              <h3 className="font-black text-slate-900 dark:text-white text-base">
+                వారం వారీ వసూళ్ల ట్రెండ్ <span className="text-xs font-medium text-slate-500 dark:text-slate-400">(Weekly Trends)</span>
+              </h3>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left">
+                <thead>
+                  <tr className="bg-slate-50 dark:bg-[#131C30] text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-white/[0.08]">
+                    <th className="py-2.5 px-3 font-bold">వారం (Week)</th>
+                    <th className="py-2.5 px-3 font-bold text-right">ఎదుర్లంక</th>
+                    <th className="py-2.5 px-3 font-bold text-right">కొత్తపల్లి</th>
+                    <th className="py-2.5 px-3 font-bold text-right text-teal-800 dark:text-teal-300">మొత్తం (Total)</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+                  {weeklyTrends.map((trend, i) => (
+                    <tr key={i} className="hover:bg-slate-50/70 dark:hover:bg-[#131C30]/50 transition-colors">
+                      <td className="py-2.5 px-3 font-black text-slate-800 dark:text-white">{trend.header}</td>
+                      <td className="py-2.5 px-3 text-right font-medium text-slate-700 dark:text-slate-300">{formatINR(trend.edurlanka)}</td>
+                      <td className="py-2.5 px-3 text-right font-medium text-slate-700 dark:text-slate-300">{formatINR(trend.kothapalli)}</td>
+                      <td className="py-2.5 px-3 text-right font-black text-teal-800 dark:text-teal-300">{formatINR(trend.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

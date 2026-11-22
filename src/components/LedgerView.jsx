@@ -80,8 +80,56 @@ export default function LedgerView({ ledgerData, onOpenAddLedger }) {
           </h3>
         </div>
 
-        {/* Mobile-friendly cards & desktop table */}
-        <div className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+        {/* Desktop Accounting Table (hidden on mobile, visible on tablet/desktop) */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr className="bg-slate-50 dark:bg-[#0A0F1D] text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-white/[0.08] uppercase text-[10px] tracking-wider font-extrabold">
+                <th className="py-3 px-4 text-center w-12">#</th>
+                <th className="py-3 px-4">తేదీ (Date)</th>
+                <th className="py-3 px-4">వివరాలు (Particulars)</th>
+                <th className="py-3 px-4 text-right text-emerald-700 dark:text-emerald-400">క్యాష్ ఇన్ (+Credit)</th>
+                <th className="py-3 px-4 text-right text-rose-600 dark:text-rose-400">క్యాష్ అవుట్ (-Debit)</th>
+                <th className="py-3 px-4 text-right font-black">ముగింపు నిల్వ (Closing)</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+              {transactions.map((txn, i) => {
+                const isCredit = txn.credit > 0;
+                const isDebit = txn.debit > 0;
+
+                return (
+                  <tr
+                    key={i}
+                    className="hover:bg-slate-50/80 dark:hover:bg-[#131C30]/50 transition-colors"
+                  >
+                    <td className="py-3 px-4 text-center text-slate-400 font-bold">
+                      {i + 1}
+                    </td>
+                    <td className="py-3 px-4 font-semibold text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                      {txn.date}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
+                      {txn.particulars}
+                    </td>
+                    <td className="py-3 px-4 text-right font-black text-emerald-700 dark:text-emerald-400 whitespace-nowrap">
+                      {isCredit ? `+${formatINR(txn.credit)}` : '-'}
+                    </td>
+                    <td className="py-3 px-4 text-right font-black text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                      {isDebit ? `-${formatINR(txn.debit)}` : '-'}
+                    </td>
+                    <td className="py-3 px-4 text-right font-black text-slate-900 dark:text-white whitespace-nowrap">
+                      {formatINR(txn.balance)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile-friendly cards (visible on mobile, hidden on desktop) */}
+        <div className="md:hidden divide-y divide-slate-100 dark:divide-white/[0.06]">
           {transactions.map((txn, i) => {
             const isCredit = txn.credit > 0;
             const isDebit = txn.debit > 0;

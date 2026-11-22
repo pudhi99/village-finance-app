@@ -20,6 +20,8 @@ import {
   ChevronRight,
   Filter,
   Sparkles,
+  Table,
+  LayoutGrid,
 } from 'lucide-react';
 import {
   formatINR,
@@ -40,6 +42,7 @@ export default function VillageView({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all'); // 'all' | 'weekly' | 'monthly' | 'monthly_due' | 'reminder' | 'inactive'
   const [colonyFilter, setColonyFilter] = useState('all'); // 'all' | 'జగన్' | 'MD' | other
+  const [viewLayout, setViewLayout] = useState('cards'); // 'cards' | 'table'
 
   if (!villageData) return null;
 
@@ -188,24 +191,54 @@ export default function VillageView({
 
       {/* Search & Quick Filter Bar */}
       <div className="space-y-2 sticky top-[57px] z-30 bg-slate-100/95 dark:bg-[#060911]/90 backdrop-blur-xl py-2 -mx-2 px-2 transition-colors">
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="పేరు, వ.సం., ఫోన్, లేదా ష్యూరిటీ నంబర్ వెతకండి..."
-            className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-300 dark:border-white/[0.08] text-xs sm:text-sm font-medium bg-white dark:bg-[#0D1527] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 shadow-sm placeholder:text-slate-400"
-          />
-          {searchQuery && (
+        {/* Search Input & Desktop Layout Switcher */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="పేరు, వ.సం., ఫోన్, లేదా ష్యూరిటీ నంబర్ వెతకండి..."
+              className="w-full pl-9 pr-8 py-2.5 rounded-xl border border-slate-300 dark:border-white/[0.08] text-xs sm:text-sm font-medium bg-white dark:bg-[#0D1527] text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-500 shadow-sm placeholder:text-slate-400"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          {/* Desktop View Switcher (Cards vs Table) */}
+          <div className="hidden md:flex items-center p-1 bg-white dark:bg-[#0D1527] rounded-xl border border-slate-200 dark:border-white/[0.08] shrink-0 shadow-sm">
             <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700"
+              onClick={() => setViewLayout('cards')}
+              title="కార్డ్స్ వ్యూ (Cards Grid)"
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-all ${
+                viewLayout === 'cards'
+                  ? 'bg-emerald-500 text-slate-950 shadow font-black'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              }`}
             >
-              ×
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>కార్డులు (Cards)</span>
             </button>
-          )}
+            <button
+              onClick={() => setViewLayout('table')}
+              title="స్ప్రెడ్‌షీట్ పట్టిక (Table View)"
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center space-x-1.5 transition-all ${
+                viewLayout === 'table'
+                  ? 'bg-emerald-500 text-slate-950 shadow font-black'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <Table className="w-3.5 h-3.5" />
+              <span>పట్టిక (Table)</span>
+            </button>
+          </div>
         </div>
 
         {/* Filter Pills */}
@@ -320,8 +353,235 @@ export default function VillageView({
         )}
       </div>
 
-      {/* Customer Cards List */}
-      <div className="space-y-3">
+      {/* Desktop Spreadsheet Table View */}
+      {viewLayout === 'table' && filteredCustomers.length > 0 && (
+        <div className="hidden md:block bg-white dark:bg-[#0D1527] rounded-2xl border border-slate-200 dark:border-white/[0.08] shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-[#0A0F1D] text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-white/[0.08] uppercase text-[10px] tracking-wider font-extrabold sticky top-0 z-10">
+                  <th className="py-3 px-3 text-center w-12">#</th>
+                  <th className="py-3 px-3">ఖాతాదారుడు (Customer)</th>
+                  <th className="py-3 px-3 text-center">రకం</th>
+                  <th className="py-3 px-3 text-right">మొత్తం</th>
+                  <th className="py-3 px-3 text-right text-emerald-700 dark:text-emerald-400">వసూలైంది</th>
+                  <th className="py-3 px-3 text-right text-rose-600 dark:text-rose-400">బాకీ</th>
+                  <th className="py-3 px-3 text-center">ఈ వారం స్థితి</th>
+                  <th className="py-3 px-3 text-center">వాయిదాలు</th>
+                  <th className="py-3 px-3 text-center">ఫోన్</th>
+                  <th className="py-3 px-3 text-center">మీడియా/GPS</th>
+                  <th className="py-3 px-3 text-right">వసూలు నమోదు</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.06]">
+                {filteredCustomers.map((cust) => {
+                  const isMonthly = cust.isMonthly;
+                  const monthlyStatus = isMonthly ? getMonthlyCustomerStatus(cust, 20261121) : null;
+                  const applicableWeeklyPayments = (cust.weeklyPayments || []).filter((p) =>
+                    isWeekApplicableForCustomer(p.weekHeader, cust.date, p.amount > 0)
+                  );
+                  const paidWeeklyCount = applicableWeeklyPayments.filter((p) => p.amount > 0).length;
+
+                  return (
+                    <tr
+                      key={cust.rowIndex}
+                      className={`hover:bg-slate-50/80 dark:hover:bg-[#131C30]/60 transition-colors ${
+                        cust.isStruckOut ? 'opacity-50 line-through bg-slate-50/40 dark:bg-black/20' : ''
+                      }`}
+                    >
+                      {/* S.No */}
+                      <td className="py-3 px-3 text-center font-black text-slate-800 dark:text-white">
+                        #{cust.sNo}
+                      </td>
+
+                      {/* Name & Colony & Surety */}
+                      <td className="py-3 px-3">
+                        <div className="font-black text-sm text-slate-900 dark:text-white flex items-center space-x-1.5">
+                          <span>{cust.nameTe}</span>
+                          {cust.nameEn && (
+                            <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
+                              ({cust.nameEn})
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-1.5 text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          {cust.colony && (
+                            <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-[#131C30] text-slate-700 dark:text-slate-300 font-bold border border-slate-200 dark:border-white/[0.06]">
+                              {cust.colony}
+                            </span>
+                          )}
+                          {cust.surety && (
+                            <span className="text-blue-600 dark:text-blue-400 font-semibold">
+                              ష్యూరిటీ: #{cust.surety}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Scheme Type */}
+                      <td className="py-3 px-3 text-center">
+                        {isMonthly ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-500/20 text-purple-900 dark:text-purple-300 border border-purple-200 dark:border-purple-500/30">
+                            నెల స్కీమ్
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-teal-50 dark:bg-teal-500/15 text-teal-900 dark:text-teal-300 border border-teal-200 dark:border-teal-500/30">
+                            25 వారాలు
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Face Value */}
+                      <td className="py-3 px-3 text-right font-bold text-slate-800 dark:text-white">
+                        {formatINR(cust.amount)}
+                      </td>
+
+                      {/* Collected */}
+                      <td className="py-3 px-3 text-right font-black text-emerald-700 dark:text-emerald-400">
+                        {formatINR(cust.totalPaid)}
+                      </td>
+
+                      {/* Remaining Due */}
+                      <td className="py-3 px-3 text-right font-black text-rose-600 dark:text-rose-400">
+                        {cust.remainingDue > 0 ? formatINR(cust.remainingDue) : '✓ తీరింది'}
+                      </td>
+
+                      {/* This Week Status */}
+                      <td className="py-3 px-3 text-center">
+                        {isMonthly ? (
+                          <span
+                            className={`px-2 py-0.5 rounded-md text-[10px] font-black border ${
+                              monthlyStatus?.type === 'due_this_saturday'
+                                ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-950 dark:text-amber-200 border-amber-400'
+                                : monthlyStatus?.type === 'overdue'
+                                ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-950 dark:text-rose-200 border-rose-300'
+                                : 'bg-slate-100 dark:bg-[#131C30] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/[0.06]'
+                            }`}
+                          >
+                            {monthlyStatus?.badgeTe || 'నెల'}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                            {paidWeeklyCount} / {applicableWeeklyPayments.length} వారం
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Progress Dots Matrix */}
+                      <td className="py-3 px-3 text-center">
+                        <div className="flex items-center justify-center space-x-1 max-w-[140px] mx-auto overflow-hidden">
+                          {applicableWeeklyPayments.slice(-6).map((p, i) => (
+                            <span
+                              key={i}
+                              title={`${p.weekHeader}: ₹${p.amount || 0}`}
+                              className={`w-2.5 h-2.5 rounded-full shrink-0 ${
+                                p.amount > 0 ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'
+                              }`}
+                            />
+                          ))}
+                          {applicableWeeklyPayments.length > 6 && (
+                            <span className="text-[9px] text-slate-400 font-bold">
+                              +{applicableWeeklyPayments.length - 6}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Phone */}
+                      <td className="py-3 px-3 text-center">
+                        {cust.phone ? (
+                          <a
+                            href={`tel:${cust.phone}`}
+                            title={`కాల్ చేయండి: ${cust.phone}`}
+                            className="inline-flex items-center space-x-1 px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 font-bold border border-emerald-200 dark:border-emerald-500/30 hover:bg-emerald-100 transition-colors"
+                          >
+                            <Phone className="w-3 h-3 fill-current" />
+                            <span>{cust.phone}</span>
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 text-[11px]">-</span>
+                        )}
+                      </td>
+
+                      {/* Media (GPS / Card / House) */}
+                      <td className="py-3 px-3 text-center">
+                        <div className="flex items-center justify-center space-x-1">
+                          {cust.gpsLocation && (
+                            <a
+                              href={
+                                cust.gpsLocation.startsWith('http')
+                                  ? cust.gpsLocation
+                                  : `https://maps.google.com/?q=${encodeURIComponent(cust.gpsLocation)}`
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              title="Google Maps"
+                              className="p-1 rounded-lg bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-300 hover:bg-blue-100"
+                            >
+                              <MapPin className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {cust.cardPhoto && (
+                            <button
+                              onClick={() =>
+                                onViewPhoto(
+                                  cust.cardPhoto,
+                                  `కార్డ్ ఫోటో - ${cust.nameTe} (#${cust.sNo})`
+                                )
+                              }
+                              title="కార్డ్ ఫోటో"
+                              className="p-1 rounded-lg bg-teal-50 dark:bg-teal-500/15 text-teal-700 dark:text-teal-300 hover:bg-teal-100"
+                            >
+                              <Camera className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          {cust.housePhoto && (
+                            <button
+                              onClick={() =>
+                                onViewPhoto(
+                                  cust.housePhoto,
+                                  `ఇంటి ఫోటో - ${cust.nameTe} (#${cust.sNo})`
+                                )
+                              }
+                              title="ఇంటి ఫోటో"
+                              className="p-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100"
+                            >
+                              <Camera className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => onOpenEditCustomer(cust, sheetTitle)}
+                            title="సవరించండి"
+                            className="p-1 rounded-lg bg-slate-100 dark:bg-[#131C30] text-slate-600 dark:text-slate-300 hover:bg-slate-200"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+
+                      {/* Collect Action Button */}
+                      <td className="py-3 px-3 text-right">
+                        {!cust.isStruckOut && (
+                          <button
+                            onClick={() => onOpenCollection(cust, sheetTitle)}
+                            className="px-3 py-1.5 bg-gradient-to-r from-teal-700 to-emerald-600 hover:from-teal-600 hover:to-emerald-500 text-white font-bold text-xs rounded-xl shadow-sm active:scale-95 transition-all inline-flex items-center space-x-1"
+                          >
+                            <Banknote className="w-3 h-3" />
+                            <span>వసూలు</span>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Cards List (Responsive Multi-Column Grid on Desktop) */}
+      <div className={`${viewLayout === 'table' ? 'md:hidden' : ''} grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4`}>
         {filteredCustomers.length === 0 ? (
           <div className="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 text-center space-y-2">
             <p className="text-slate-500 dark:text-slate-400 text-sm font-semibold">ఖాతాలు కనపడలేదు (No customers match)</p>

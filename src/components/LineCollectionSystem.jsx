@@ -1248,9 +1248,9 @@ export default function LineCollectionSystem({
         </div>
       ) : (
         /* RADAR LIST VIEW (Option 1 - Default & Primary) */
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5 sm:gap-4">
           {filteredCustomers.length === 0 ? (
-            <div className="bg-white dark:bg-[#0D1527] p-8 rounded-2xl border border-slate-200 dark:border-white/[0.08] text-center space-y-2">
+            <div className="col-span-full bg-white dark:bg-[#0D1527] p-8 rounded-2xl border border-slate-200 dark:border-white/[0.08] text-center space-y-2">
               <Compass className="w-8 h-8 text-slate-400 mx-auto" />
               <p className="text-slate-600 dark:text-slate-300 font-bold text-sm">
                 ఈ ఫిల్టర్‌లో ఎవరూ లేరు (No customers in this range)
@@ -1797,7 +1797,7 @@ function InteractiveLeafletMap({
 
       <div
         ref={mapContainerRef}
-        className="w-full h-[460px] rounded-xl overflow-hidden border border-slate-200 dark:border-white/[0.06] relative z-10"
+        className="w-full h-[460px] md:h-[580px] lg:h-[640px] rounded-xl overflow-hidden border border-slate-200 dark:border-white/[0.06] relative z-10"
       >
         {/* Floating Controls: Recenter to My GPS & Fit All Pins */}
         <div className="absolute right-3 bottom-6 z-[500] flex flex-col space-y-2">

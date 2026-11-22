@@ -25,7 +25,7 @@ export default function Header({
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 dark:bg-[#0A0F1D]/85 backdrop-blur-xl border-b border-slate-200 dark:border-white/[0.08] shadow-sm dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] transition-colors">
-      <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="max-w-7xl 2xl:max-w-[1480px] mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
         {/* App Title & Bag Balance */}
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/25">

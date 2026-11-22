@@ -427,7 +427,7 @@ export default function Home() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-3 sm:px-4 pt-3">
+      <main className="flex-1 max-w-7xl 2xl:max-w-[1480px] w-full mx-auto px-3 sm:px-6 lg:px-8 pt-3">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-3">
             <Loader2 className="w-8 h-8 text-teal-700 dark:text-teal-400 animate-spin" />
